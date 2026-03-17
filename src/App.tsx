@@ -12,6 +12,8 @@ import { JudgeView } from './components/JudgeView';
 import { DemoView } from './components/DemoView';
 import { RepoView } from './components/RepoView';
 import { RoadmapView } from './components/RoadmapView';
+import { DesignDoc } from './components/DesignDoc';
+import { CLIInterface } from './components/CLIInterface';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
 import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -59,6 +61,7 @@ const ErrorDisplay = ({ error }: { error: string }) => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isCLIOpen, setIsCLIOpen] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -330,7 +333,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-[#0A0B0D] text-white font-sans">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenCLI={() => setIsCLIOpen(true)} />
       
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-12">
@@ -796,6 +799,7 @@ export default function App() {
           {activeTab === 'demo' && <DemoView />}
           {activeTab === 'repositories' && <RepoView />}
           {activeTab === 'roadmap' && <RoadmapView />}
+          {activeTab === 'design' && <DesignDoc />}
         </AnimatePresence>
 
         {error && <ErrorDisplay error={error} />}
@@ -853,6 +857,13 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <CLIInterface 
+        isOpen={isCLIOpen} 
+        onClose={() => setIsCLIOpen(false)} 
+        prs={prs}
+        queue={queue}
+      />
     </div>
   );
 }

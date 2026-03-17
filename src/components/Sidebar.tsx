@@ -1,12 +1,13 @@
 import React from 'react';
-import { GitBranch, GitPullRequest, LayoutDashboard, Settings, Users, Zap, ShieldCheck, Bot, Globe, ListOrdered } from 'lucide-react';
+import { GitBranch, GitPullRequest, LayoutDashboard, Settings, Users, Zap, ShieldCheck, Bot, Globe, ListOrdered, FileText, Terminal } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onOpenCLI: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpenCLI }) => {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'repositories', icon: Globe, label: 'Repositories' },
@@ -14,8 +15,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     { id: 'prs', icon: GitPullRequest, label: 'Pull Requests' },
     { id: 'teams', icon: Users, label: 'Teams' },
     { id: 'queue', icon: Zap, label: 'Merge Queues' },
-    {id: 'demo', icon: Bot, label: 'Live Demo' },
+    { id: 'demo', icon: Bot, label: 'Live Demo' },
     { id: 'roadmap', icon: ListOrdered, label: 'Roadmap' },
+    { id: 'design', icon: FileText, label: 'Design Doc' },
     { id: 'judge', icon: ShieldCheck, label: "Judge's Guide" },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
@@ -46,6 +48,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
             <span className="font-medium">{item.label}</span>
           </button>
         ))}
+        <div className="pt-4 mt-4 border-t border-white/5">
+          <button
+            onClick={onOpenCLI}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:bg-white/5 hover:text-white transition-all"
+          >
+            <Terminal size={20} />
+            <span className="font-medium">Terminal CLI</span>
+          </button>
+        </div>
       </nav>
       
       <div className="p-4 border-t border-white/10">

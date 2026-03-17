@@ -1,13 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { FileText, X, Download, Layers, GitBranch, Shield, Zap, Cpu, Loader2, Server, Database, Globe, Code2, Workflow, CheckCircle2, QrCode } from 'lucide-react';
+import { FileText, X, Download, Layers, GitBranch, Shield, Zap, Cpu, Loader2, Server, Database, Globe, Code2, Workflow, CheckCircle2, QrCode, Terminal } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
-
-interface DesignDocProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
 const ArchitectureDiagram = () => (
   <div className="my-12 p-8 bg-zinc-900/30 rounded-3xl border border-zinc-800/50 flex flex-col items-center">
@@ -98,11 +93,9 @@ const SectionFooter = ({ page, total }: { page: number, total: number }) => (
   </div>
 );
 
-export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
+export const DesignDoc: React.FC = () => {
   const docRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-
-  if (!isOpen) return null;
 
   const exportToPDF = async () => {
     if (!docRef.current || isExporting) return;
@@ -213,34 +206,29 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md print:hidden">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/50">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-500/10 rounded-2xl">
-              <FileText className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-zinc-100 tracking-tight">Technical Design Specification</h2>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-[0.4em] font-black">Confidential • GitFlow AI v1.0</p>
-            </div>
+    <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full flex flex-col shadow-2xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/50">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-blue-500/10 rounded-2xl">
+            <FileText className="w-6 h-6 text-blue-400" />
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={exportToPDF} disabled={isExporting} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-xl transition-all text-xs font-bold shadow-lg shadow-blue-600/20">
-              {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              {isExporting ? 'Generating PDF...' : 'Export PDF'}
-            </button>
-            <div className="w-px h-6 bg-zinc-800 mx-2" />
-            <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-500 hover:text-zinc-100">
-              <X className="w-6 h-6" />
-            </button>
+          <div>
+            <h2 className="text-xl font-bold text-zinc-100 tracking-tight">Technical Design Specification</h2>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-[0.4em] font-black">Confidential • GitFlow AI v1.0</p>
           </div>
         </div>
-        
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-12 bg-zinc-950 scrollbar-hide">
-          <div ref={docRef} id="design-doc-content" className="max-w-4xl mx-auto space-y-16 pb-24">
+        <div className="flex items-center gap-3">
+          <button onClick={exportToPDF} disabled={isExporting} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-xl transition-all text-xs font-bold shadow-lg shadow-blue-600/20">
+            {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {isExporting ? 'Generating PDF...' : 'Export PDF'}
+          </button>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 p-12 bg-zinc-950">
+        <div ref={docRef} id="design-doc-content" className="max-w-4xl mx-auto space-y-16 pb-24">
             
             {/* Cover Page */}
             <section className="min-h-[800px] flex flex-col justify-center items-center text-center page-break-after border-b border-zinc-900 pb-24 relative overflow-hidden">
@@ -424,11 +412,62 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
               <SectionFooter page={6} total={9} />
             </section>
 
-            {/* 6. Advanced Merge Topologies */}
+            {/* 6. Engineer Workflow & CLI */}
+            <section className="page-break-after">
+              <div className="flex items-center gap-4 mb-6">
+                <Terminal className="text-blue-400" size={24} />
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">6. Engineer Workflow & CLI</h2>
+              </div>
+              <p className="text-zinc-400 mb-8">
+                GitFlow AI provides a robust Command Line Interface (CLI) for engineers and AI agents to orchestrate the merge lifecycle.
+              </p>
+              
+              <div className="space-y-8">
+                <div className="p-8 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                  <h3 className="text-white font-bold mb-4 uppercase tracking-widest text-xs">Standard Engineer Workflow</h3>
+                  <div className="space-y-4">
+                    {[
+                      { step: "06", title: "Submit to Review", desc: "PR is submitted to the AI-augmented code review queue." },
+                      { step: "07", title: "Address Comments", desc: "Engineer or AI addresses review commits and feedback." },
+                      { step: "08", title: "Move to Merge Queue", desc: "PR is promoted to the automated merge orchestration queue." },
+                      { step: "09", title: "Project Merge", desc: "PR is merged into the designated project/sprint branch." },
+                      { step: "10", title: "Master Merge", desc: "Project branch is merged into the master (primary) branch." }
+                    ].map((item, i) => (
+                      <div key={i} className="flex gap-4 items-start">
+                        <span className="text-blue-500 font-mono font-bold">{item.step}</span>
+                        <div>
+                          <p className="text-white font-bold text-sm">{item.title}</p>
+                          <p className="text-zinc-500 text-xs">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-8 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                  <h3 className="text-white font-bold mb-4 uppercase tracking-widest text-xs">CLI Command Specification</h3>
+                  <DataTable 
+                    headers={["Command", "Description", "Parameters"]}
+                    rows={[
+                      ["`status`", "Check merge queue status and PR counts.", "None"],
+                      ["`pause`", "Suspend the automated merge workflow.", "None"],
+                      ["`unpause`", "Resume the automated merge workflow.", "None"],
+                      ["`reorder`", "Change the priority/order of PRs in queue.", "`pr_id`, `position`"],
+                      ["`remove`", "Eject a PR from the merge queue.", "`pr_id`"],
+                      ["`batch`", "Group PRs into an atomic unit.", "`pr_ids[]`"],
+                      ["`priority`", "Set PR priority (High/Low).", "`pr_id`, `level`"]
+                    ]}
+                  />
+                </div>
+              </div>
+              <SectionFooter page={7} total={10} />
+            </section>
+
+            {/* 7. Advanced Merge Topologies */}
             <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <GitBranch className="text-blue-400" size={24} />
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">6. Advanced Merge Topologies</h2>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">7. Advanced Merge Topologies</h2>
               </div>
               <div className="space-y-4 text-zinc-400">
                 <p>The system supports complex branching strategies beyond simple feature-to-master flows:</p>
@@ -438,14 +477,14 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   <li><span className="text-white font-bold">Shadow Integration</span>: Running background merges into a "shadow" branch to detect conflicts days before the actual merge deadline.</li>
                 </ul>
               </div>
-              <SectionFooter page={7} total={9} />
+              <SectionFooter page={8} total={10} />
             </section>
 
-            {/* 7. CI/CD Pipeline */}
+            {/* 8. CI/CD Pipeline */}
             <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Workflow className="text-blue-400" size={24} />
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">7. CI/CD Pipeline Integration</h2>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">8. CI/CD Pipeline Integration</h2>
               </div>
               <div className="grid grid-cols-2 gap-8">
                 <div className="p-6 bg-zinc-900/30 rounded-3xl border border-zinc-800/50">
@@ -474,14 +513,14 @@ test_job:
                   </pre>
                 </div>
               </div>
-              <SectionFooter page={8} total={9} />
+              <SectionFooter page={9} total={10} />
             </section>
 
-            {/* 8. Verification & Authenticity */}
+            {/* 9. Verification & Authenticity */}
             <section className="page-break-after flex flex-col items-center justify-center text-center py-24">
               <div className="flex items-center gap-4 mb-12">
                 <QrCode className="text-blue-400" size={24} />
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">8. Verification & Authenticity</h2>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">9. Verification & Authenticity</h2>
               </div>
               <p className="text-zinc-400 mb-12 max-w-lg">
                 Scan the QR code below to verify the authenticity of this technical specification or to access the live deployment of the GitFlow AI orchestration layer.
@@ -498,7 +537,7 @@ test_job:
                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em]">Digital Signature Verified</p>
                 <p className="text-[10px] font-mono text-zinc-600">HASH: 7f8e9a2b1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f</p>
               </div>
-              <SectionFooter page={9} total={9} />
+              <SectionFooter page={10} total={10} />
             </section>
 
             {/* Footer */}
@@ -507,7 +546,6 @@ test_job:
             </div>
 
           </div>
-        </div>
       </div>
     </div>
   );

@@ -68,43 +68,43 @@ const tasks: Task[] = [
   },
   {
     id: '6',
-    title: 'Tag-Based Rebase Cycle',
-    description: 'Automate the post-merge rebase workflow to keep project branches synchronized with master.',
-    status: 'planned',
+    title: 'Code Review & Merge Queue CLI',
+    description: 'Implement a command-line interface for engineers to manage PRs in the review and merge queues, including status checks and queue manipulation.',
+    status: 'in-progress',
     category: 'Core',
     priority: 'High'
   },
   {
     id: '7',
-    title: 'AI Auto Code Review',
-    description: 'Generate semantic feedback on PRs before merge attempts to catch logic errors early.',
+    title: 'Atomic Batch Merging',
+    description: 'Support grouping multiple PRs as an atomic unit for "all or nothing" merging into project branches.',
+    status: 'planned',
+    category: 'Core',
+    priority: 'High'
+  },
+  {
+    id: '8',
+    title: 'Priority-Based Merge Queues',
+    description: 'Implement high and low priority lanes in the merge queue to expedite critical bug fixes.',
+    status: 'planned',
+    category: 'Core',
+    priority: 'High'
+  },
+  {
+    id: '9',
+    title: 'AI-Automated Code Review',
+    description: 'Integrate Gemini to automatically address minor review comments and suggest fixes.',
     status: 'in-progress',
     category: 'AI',
     priority: 'Medium'
   },
   {
-    id: '8',
-    title: 'Custom Conflict Rules Engine',
-    description: 'Allow users to define domain-specific resolution rules (e.g., "Always prefer Master for CSS").',
+    id: '10',
+    title: 'Project-to-Master Sync',
+    description: 'Automate the final stage of merging project branches into the master branch with full regression validation.',
     status: 'planned',
     category: 'Core',
-    priority: 'Low'
-  },
-  {
-    id: '9',
-    title: 'Audit Log & History',
-    description: 'Maintain a detailed record of all AI-resolved conflicts and merge decisions for transparency.',
-    status: 'planned',
-    category: 'Infrastructure',
-    priority: 'Medium'
-  },
-  {
-    id: '10',
-    title: 'Mobile Responsive Dashboard',
-    description: 'Optimize the dashboard and graph visualizations for mobile and tablet devices.',
-    status: 'in-progress',
-    category: 'UI',
-    priority: 'Low'
+    priority: 'High'
   }
 ];
 

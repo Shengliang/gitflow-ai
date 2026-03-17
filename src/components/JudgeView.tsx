@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Zap, Cpu, GitMerge, CheckCircle2, AlertCircle, Info, Layers, ExternalLink, FileText } from 'lucide-react';
+import { ShieldCheck, Zap, Cpu, GitMerge, CheckCircle2, AlertCircle, Info, Layers, ExternalLink, FileText, X } from 'lucide-react';
 import { DesignDoc } from './DesignDoc';
+import { AnimatePresence } from 'motion/react';
 
 export const JudgeView: React.FC = () => {
   const [isDesignDocOpen, setIsDesignDocOpen] = useState(false);
@@ -105,7 +106,28 @@ export const JudgeView: React.FC = () => {
         </div>
       </section>
 
-      <DesignDoc isOpen={isDesignDocOpen} onClose={() => setIsDesignDocOpen(false)} />
+      <AnimatePresence>
+        {isDesignDocOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md print:hidden">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden"
+            >
+              <button 
+                onClick={() => setIsDesignDocOpen(false)}
+                className="absolute top-6 right-6 z-[60] p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div className="overflow-y-auto max-h-[90vh] rounded-3xl">
+                <DesignDoc />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <section>
         <h3 className="text-xl font-bold text-white mb-8">Requirement Checklist</h3>
