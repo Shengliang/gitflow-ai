@@ -35,8 +35,20 @@ export interface PullRequest {
 export interface MergeJob {
   id: string;
   prId: string;
+  queueId?: string;
   status: 'queued' | 'resolving_conflicts' | 'running_tests' | 'completed' | 'failed';
   progress: number;
   logs: string[];
   aiResolution?: string;
+}
+
+export interface MergeQueue {
+  id: string;
+  name: string;
+  targetBranch: string;
+  strategy: 'binary_tree' | 'fifo';
+  batchSize: number;
+  leafBranches: string[];
+  isActive: boolean;
+  createdAt: number;
 }

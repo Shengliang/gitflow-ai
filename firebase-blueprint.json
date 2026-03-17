@@ -62,12 +62,28 @@
         "role": { "type": "string", "enum": ["admin", "engineer"], "description": "User role" }
       },
       "required": ["displayName", "email", "role"]
+    },
+    "MergeQueue": {
+      "title": "MergeQueue",
+      "description": "A configurable merge queue",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Queue name" },
+        "targetBranch": { "type": "string", "description": "Target branch for merges" },
+        "strategy": { "type": "string", "enum": ["binary_tree", "fifo"], "description": "Merge strategy" },
+        "batchSize": { "type": "number", "description": "Number of PRs per batch" },
+        "leafBranches": { "type": "array", "items": { "type": "string" }, "description": "Ordered list of branches to merge" },
+        "isActive": { "type": "boolean", "description": "Whether the queue is active" },
+        "createdAt": { "type": "number", "description": "Creation timestamp" }
+      },
+      "required": ["name", "targetBranch", "strategy", "batchSize", "leafBranches", "isActive", "createdAt"]
     }
   },
   "firestore": {
     "/branches/{branchId}": { "schema": "Branch", "description": "Collection of branches" },
     "/pullRequests/{prId}": { "schema": "PullRequest", "description": "Collection of pull requests" },
     "/mergeJobs/{jobId}": { "schema": "MergeJob", "description": "Collection of active merge jobs" },
+    "/mergeQueues/{queueId}": { "schema": "MergeQueue", "description": "Collection of merge queues" },
     "/teams/{teamId}": { "schema": "Team", "description": "Collection of teams" },
     "/users/{userId}": { "schema": "User", "description": "User profiles" }
   }

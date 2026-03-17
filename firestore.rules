@@ -38,6 +38,16 @@ service cloud.firestore {
     //   - name: string (required)
     //   - engineers: list (required, size < 50)
     //
+    // Collection: mergeQueues
+    // Fields:
+    //   - name: string (required)
+    //   - targetBranch: string (required)
+    //   - strategy: string (required, ['binary_tree', 'fifo'])
+    //   - batchSize: number (required)
+    //   - leafBranches: list (required, size < 100)
+    //   - isActive: bool (required)
+    //   - createdAt: number (required)
+    //
     // Collection: users
     // Fields:
     //   - displayName: string (required)
@@ -116,6 +126,17 @@ service cloud.firestore {
              data.engineers is list && data.engineers.size() < 50;
     }
 
+    function isValidMergeQueue(data) {
+      return hasRequiredFields(['name', 'targetBranch', 'strategy', 'batchSize', 'leafBranches', 'isActive', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.targetBranch is string &&
+             data.strategy in ['binary_tree', 'fifo'] &&
+             data.batchSize is number &&
+             data.leafBranches is list && data.leafBranches.size() < 100 &&
+             data.isActive is bool &&
+             data.createdAt is number;
+    }
+
     function isValidUser(data) {
       return hasRequiredFields(['displayName', 'email', 'role']) &&
              data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
@@ -157,6 +178,12 @@ service cloud.firestore {
     match /teams/{teamId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
+    }
+
+    match /mergeQueues/{queueId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidMergeQueue(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Default deny

@@ -12,7 +12,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     { id: 'branches', icon: GitBranch, label: 'Branches' },
     { id: 'prs', icon: GitPullRequest, label: 'Pull Requests' },
     { id: 'teams', icon: Users, label: 'Teams' },
-    { id: 'queue', icon: Zap, label: 'Merge Queue' },
+    { id: 'queue', icon: Zap, label: 'Merge Queues' },
     { id: 'demo', icon: Bot, label: 'Live Demo' },
     { id: 'judge', icon: ShieldCheck, label: "Judge's Guide" },
     { id: 'settings', icon: Settings, label: 'Settings' },

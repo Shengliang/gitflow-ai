@@ -10,8 +10,8 @@ import { MergeQueue } from './components/MergeQueue';
 import { BranchGraph } from './components/BranchGraph';
 import { JudgeView } from './components/JudgeView';
 import { DemoView } from './components/DemoView';
-import { Branch, PullRequest, MergeJob, Team } from './types';
-import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
+import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { 
@@ -60,6 +60,7 @@ export default function App() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [prs, setPrs] = useState<PullRequest[]>([]);
   const [queue, setQueue] = useState<MergeJob[]>([]);
+  const [mergeQueues, setMergeQueues] = useState<MergeQueueType[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +111,10 @@ export default function App() {
       setQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MergeJob)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'mergeJobs'));
 
+    const unsubMergeQueues = onSnapshot(collection(db, 'mergeQueues'), (snapshot) => {
+      setMergeQueues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MergeQueueType)));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'mergeQueues'));
+
     const unsubTeams = onSnapshot(collection(db, 'teams'), (snapshot) => {
       setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'teams'));
@@ -118,6 +123,7 @@ export default function App() {
       unsubBranches();
       unsubPRs();
       unsubQueue();
+      unsubMergeQueues();
       unsubTeams();
     };
   }, [isAuthReady, user]);
@@ -140,6 +146,39 @@ export default function App() {
   };
 
   const handleLogout = () => signOut(auth);
+
+  const createMergeQueue = async () => {
+    try {
+      await addDoc(collection(db, 'mergeQueues'), {
+        name: `New Release Queue ${mergeQueues.length + 1}`,
+        targetBranch: 'master',
+        strategy: 'binary_tree',
+        batchSize: 5,
+        leafBranches: [],
+        isActive: true,
+        createdAt: Date.now()
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'mergeQueues');
+    }
+  };
+
+  const deleteMergeQueue = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'mergeQueues', id), { isActive: false });
+      // In a real app we might delete, here we just deactivate
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'mergeQueues');
+    }
+  };
+
+  const updateQueueConfig = async (id: string, updates: Partial<MergeQueueType>) => {
+    try {
+      await updateDoc(doc(db, 'mergeQueues', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'mergeQueues');
+    }
+  };
 
   const handleMerge = async (prId: string) => {
     if (!user) return;
@@ -449,6 +488,19 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="space-y-6"
             >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">GitLab Branches</h2>
+                  <p className="text-white/40">All branches currently tracked in the repository</p>
+                </div>
+                <button 
+                  onClick={() => alert('Fetching latest branches from GitLab...')}
+                  className="bg-white/5 border border-white/10 hover:border-white/30 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all"
+                >
+                  <RefreshCw size={18} />
+                  Sync with GitLab
+                </button>
+              </div>
               <div className="bg-[#1C1D21] border border-white/5 rounded-3xl overflow-hidden">
                 <table className="w-full text-left">
                   <thead>
@@ -497,6 +549,125 @@ export default function App() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'queue' && (
+            <motion.div
+              key="queue"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-12"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Merge Orchestration</h2>
+                  <p className="text-white/40">Manage and configure your AI-driven merge queues</p>
+                </div>
+                <button 
+                  onClick={createMergeQueue}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-500/20"
+                >
+                  <Plus size={18} />
+                  New Queue
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <h3 className="text-xs font-bold text-white/30 uppercase tracking-widest">Active Queues</h3>
+                  {mergeQueues.filter(q => q.isActive).map(q => (
+                    <div key={q.id} className="bg-[#1C1D21] border border-white/5 rounded-[32px] p-8 space-y-6 group hover:border-orange-500/30 transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-orange-500/10 rounded-2xl flex items-center justify-center">
+                            <Zap className="text-orange-500" size={24} />
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-bold text-white">{q.name}</h4>
+                            <p className="text-xs text-white/40">Target: <span className="font-mono">{q.targetBranch}</span></p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => deleteMergeQueue(q.id)}
+                          className="p-2 text-white/20 hover:text-rose-500 transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Strategy</p>
+                          <select 
+                            value={q.strategy}
+                            onChange={(e) => updateQueueConfig(q.id, { strategy: e.target.value as any })}
+                            className="bg-transparent text-sm font-bold text-white focus:outline-none w-full"
+                          >
+                            <option value="binary_tree">Binary Tree</option>
+                            <option value="fifo">FIFO Batching</option>
+                          </select>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Batch Size</p>
+                          <input 
+                            type="number"
+                            value={q.batchSize}
+                            onChange={(e) => updateQueueConfig(q.id, { batchSize: parseInt(e.target.value) })}
+                            className="bg-transparent text-sm font-bold text-white focus:outline-none w-full"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Leaf Branches (Merge Order)</p>
+                          <div className="group relative">
+                            <ShieldCheck size={14} className="text-white/20 cursor-help" />
+                            <div className="absolute bottom-full right-0 mb-2 w-64 bg-black border border-white/10 p-3 rounded-xl text-[10px] text-white/60 hidden group-hover:block z-50">
+                              The order here determines the binary tree merge sequence. Branches 1 & 2 merge first, then 3 & 4, and so on.
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {q.leafBranches.length > 0 ? q.leafBranches.map((branch, i) => (
+                            <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
+                              <span className="text-white/30 font-mono">{i + 1}.</span>
+                              <span className="text-white/80">{branch}</span>
+                            </div>
+                          )) : (
+                            <p className="text-xs text-white/20 italic">No branches assigned to this queue</p>
+                          )}
+                          <button className="w-8 h-8 bg-white/5 border border-dashed border-white/10 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:border-white/30 transition-all">
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 flex items-center gap-4">
+                        <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl hover:bg-orange-500 hover:text-white transition-all text-sm">
+                          Start Merge Cycle
+                        </button>
+                        <button className="p-3 bg-white/5 rounded-2xl border border-white/5 text-white/60 hover:text-white transition-colors">
+                          <Settings2 size={20} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {mergeQueues.filter(q => q.isActive).length === 0 && (
+                    <div className="py-20 text-center bg-white/5 rounded-[32px] border border-dashed border-white/10">
+                      <Zap className="mx-auto text-white/10 mb-4" size={48} />
+                      <p className="text-white/30">No active merge queues. Create one to get started.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <h3 className="text-xs font-bold text-white/30 uppercase tracking-widest">Live Execution</h3>
+                  <MergeQueue jobs={queue} />
+                </div>
               </div>
             </motion.div>
           )}
@@ -583,6 +754,18 @@ export default function App() {
                     targetBranch: 'project-alpha',
                     status: 'open',
                     createdAt: Date.now() - 3600000,
+                  });
+
+                  // Seed Merge Queues
+                  const mqCol = collection(db, 'mergeQueues');
+                  await addDoc(mqCol, {
+                    name: 'Main Release Cycle',
+                    targetBranch: 'master',
+                    strategy: 'binary_tree',
+                    batchSize: 8,
+                    leafBranches: ['project-alpha', 'project-beta', 'hotfix-auth', 'feature-ui'],
+                    isActive: true,
+                    createdAt: Date.now()
                   });
                   
                   alert('Database seeded successfully!');

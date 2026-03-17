@@ -25,7 +25,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 // Architecture Diagram SVG
 const ArchitectureSVG = () => (
-  <svg viewBox="0 0 800 400" className="w-full h-auto bg-white/5 rounded-3xl p-8 border border-white/10">
+  <svg viewBox="0 0 800 500" className="w-full h-auto bg-white/5 rounded-3xl p-8 border border-white/10">
     <defs>
       <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
         <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
@@ -33,35 +33,39 @@ const ArchitectureSVG = () => (
     </defs>
     
     {/* Users */}
-    <rect x="50" y="150" width="100" height="100" rx="10" fill="#f97316" fillOpacity="0.2" stroke="#f97316" strokeWidth="2" />
-    <text x="100" y="205" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">Engineers</text>
+    <rect x="50" y="200" width="100" height="100" rx="10" fill="#f97316" fillOpacity="0.2" stroke="#f97316" strokeWidth="2" />
+    <text x="100" y="255" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">Engineers</text>
     
     {/* Frontend */}
-    <rect x="250" y="150" width="120" height="100" rx="10" fill="#3b82f6" fillOpacity="0.2" stroke="#3b82f6" strokeWidth="2" />
-    <text x="310" y="205" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">React UI</text>
+    <rect x="250" y="200" width="120" height="100" rx="10" fill="#3b82f6" fillOpacity="0.2" stroke="#3b82f6" strokeWidth="2" />
+    <text x="310" y="255" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">React UI</text>
     
     {/* Backend/AI */}
-    <rect x="450" y="50" width="150" height="300" rx="10" fill="#10b981" fillOpacity="0.2" stroke="#10b981" strokeWidth="2" />
+    <rect x="450" y="50" width="150" height="400" rx="10" fill="#10b981" fillOpacity="0.2" stroke="#10b981" strokeWidth="2" />
     <text x="525" y="80" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">AI Orchestrator</text>
     <rect x="470" y="100" width="110" height="40" rx="5" fill="white" fillOpacity="0.1" stroke="white" strokeOpacity="0.2" />
-    <text x="525" y="125" textAnchor="middle" fill="white" fontSize="10">Gemini Pro</text>
+    <text x="525" y="125" textAnchor="middle" fill="white" fontSize="10">Gemini 3.1 Pro</text>
     <rect x="470" y="160" width="110" height="40" rx="5" fill="white" fillOpacity="0.1" stroke="white" strokeOpacity="0.2" />
-    <text x="525" y="185" textAnchor="middle" fill="white" fontSize="10">Merge Logic</text>
+    <text x="525" y="185" textAnchor="middle" fill="white" fontSize="10">Merge Queues</text>
     <rect x="470" y="220" width="110" height="40" rx="5" fill="white" fillOpacity="0.1" stroke="white" strokeOpacity="0.2" />
     <text x="525" y="245" textAnchor="middle" fill="white" fontSize="10">Conflict Resolver</text>
+    <rect x="470" y="280" width="110" height="40" rx="5" fill="white" fillOpacity="0.1" stroke="white" strokeOpacity="0.2" />
+    <text x="525" y="305" textAnchor="middle" fill="white" fontSize="10">AI Code Review</text>
+    <rect x="470" y="340" width="110" height="40" rx="5" fill="white" fillOpacity="0.1" stroke="white" strokeOpacity="0.2" />
+    <text x="525" y="365" textAnchor="middle" fill="white" fontSize="10">Rebase Engine</text>
     
     {/* External Systems */}
-    <rect x="680" y="150" width="100" height="100" rx="10" fill="#8b5cf6" fillOpacity="0.2" stroke="#8b5cf6" strokeWidth="2" />
-    <text x="730" y="205" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">GitLab / CI</text>
+    <rect x="680" y="200" width="100" height="100" rx="10" fill="#8b5cf6" fillOpacity="0.2" stroke="#8b5cf6" strokeWidth="2" />
+    <text x="730" y="255" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">GitLab / CI</text>
     
     {/* Arrows */}
-    <line x1="150" y1="200" x2="250" y2="200" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
-    <line x1="370" y1="200" x2="450" y2="200" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
-    <line x1="600" y1="200" x2="680" y2="200" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
+    <line x1="150" y1="250" x2="250" y2="250" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
+    <line x1="370" y1="250" x2="450" y2="250" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
+    <line x1="600" y1="250" x2="680" y2="250" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
     
     {/* Feedback loop */}
-    <path d="M 525 350 Q 525 380 310 380 Q 310 250 310 250" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrowhead)" />
-    <text x="417" y="375" textAnchor="middle" fill="#94a3b8" fontSize="10">Real-time Updates (Firebase)</text>
+    <path d="M 525 450 Q 525 480 310 480 Q 310 300 310 300" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrowhead)" />
+    <text x="417" y="475" textAnchor="middle" fill="#94a3b8" fontSize="10">Real-time Sync (Firestore)</text>
   </svg>
 );
 
@@ -70,26 +74,31 @@ const MermaidDiagram = () => (
 {`graph TD
   A[Engineers] -->|PRs| B(React Frontend)
   B -->|Merge Request| C{AI Orchestrator}
-  C -->|Analyze| D[Gemini Pro]
-  D -->|Resolution| C
-  C -->|Execute| E[GitLab API]
+  C -->|Analyze| D[Gemini 3.1 Pro]
+  D -->|AI Code Review| C
+  D -->|Semantic Conflict Resolution| C
+  C -->|Manage| Q[Merge Queues]
+  Q -->|Binary Tree / FIFO| E[GitLab API]
   E -->|Test Results| F{CI/CD Pipeline}
   F -->|Success| G[Merge to Master]
   F -->|Failure| H[AI Diagnostics]
   H -->|Notification| A
-  C -->|Real-time Sync| B`}
+  C -->|Sync State| FB[(Firebase Firestore)]
+  FB -->|Real-time Updates| B`}
   </pre>
 );
 
 export const DemoView: React.FC = () => {
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', content: string }[]>([
-    { role: 'bot', content: "Hello! I'm the GitFlow AI demo agent. I can explain how our system automates the SDLC, resolves conflicts, and integrates with your workflow. Click 'Start Presentation' for a guided 3-minute tour!" }
+    { role: 'bot', content: "Hello! I'm the GitFlow AI demo agent. I can explain how our system automates the SDLC, resolves conflicts, and integrates with your workflow. Click 'Start Presentation' for a guided 4-minute tour!" }
   ]);
+  const [transcript, setTranscript] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
   const [presentationStep, setPresentationStep] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const liveSessionRef = useRef<any>(null);
 
@@ -98,6 +107,12 @@ export const DemoView: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (transcriptRef.current) {
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+    }
+  }, [transcript]);
 
   const nextStartTimeRef = useRef<number>(0);
 
@@ -130,7 +145,8 @@ export const DemoView: React.FC = () => {
 
   const startPresentation = async () => {
     setIsPresenting(true);
-    setMessages(prev => [...prev, { role: 'bot', content: "Starting the 3-minute Live Presentation... Please ensure your volume is up!" }]);
+    setTranscript([]);
+    setMessages(prev => [...prev, { role: 'bot', content: "Starting the 4-minute Live Presentation... Please ensure your volume is up!" }]);
     
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -209,7 +225,10 @@ export const DemoView: React.FC = () => {
             }
             
             if (message.serverContent?.modelTurn?.parts[0]?.text) {
-              setMessages(prev => [...prev, { role: 'bot', content: message.serverContent!.modelTurn!.parts[0].text! }]);
+              const text = message.serverContent.modelTurn.parts[0].text;
+              setTranscript(prev => [...prev, text]);
+              // Also add to chat messages for context
+              setMessages(prev => [...prev, { role: 'bot', content: text }]);
             }
           },
           onclose: () => setIsPresenting(false),
@@ -255,7 +274,7 @@ export const DemoView: React.FC = () => {
               className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
             >
               <Play size={20} className="group-hover:scale-110 transition-transform" />
-              Start 3-Min Presentation
+              Start 4-Min Presentation
             </button>
           ) : (
             <button 
@@ -268,6 +287,53 @@ export const DemoView: React.FC = () => {
           )}
         </div>
       </section>
+
+      {/* Live Transcript Panel */}
+      <AnimatePresence>
+        {isPresenting && (
+          <motion.section
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-zinc-900/50 border border-orange-500/20 rounded-[32px] overflow-hidden shadow-2xl shadow-orange-500/5"
+          >
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-orange-500/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-500/20 rounded-lg">
+                  <Mic className="w-5 h-5 text-orange-500 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Live Presentation Transcript</h3>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Real-time AI Monologue • Auto-Scrolling Enabled</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Live</span>
+              </div>
+            </div>
+            <div 
+              ref={transcriptRef}
+              className="p-8 h-48 overflow-y-auto scroll-smooth space-y-4 font-serif italic text-lg text-zinc-300 leading-relaxed"
+            >
+              {transcript.length === 0 ? (
+                <p className="text-zinc-600 animate-pulse">Waiting for AI to begin speaking...</p>
+              ) : (
+                transcript.map((text, i) => (
+                  <motion.p 
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="border-l-2 border-orange-500/30 pl-4"
+                  >
+                    {text}
+                  </motion.p>
+                ))
+              )}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Left Column: Chat Agent */}
