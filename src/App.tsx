@@ -11,7 +11,7 @@ import { BranchGraph } from './components/BranchGraph';
 import { JudgeView } from './components/JudgeView';
 import { DemoView } from './components/DemoView';
 import { Branch, PullRequest, MergeJob, Team } from './types';
-import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle } from 'lucide-react';
+import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { 
@@ -121,6 +121,14 @@ export default function App() {
       unsubTeams();
     };
   }, [isAuthReady, user]);
+
+  useEffect(() => {
+    const handleTabChange = (e: any) => {
+      setActiveTab(e.detail);
+    };
+    window.addEventListener('changeTab', handleTabChange);
+    return () => window.removeEventListener('changeTab', handleTabChange);
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -274,6 +282,14 @@ export default function App() {
                   <p className="text-[10px] text-white/40">{user.email}</p>
                 </div>
               </div>
+              <div className="h-8 w-px bg-white/10"></div>
+              <button 
+                onClick={() => window.location.reload()}
+                className="text-white/40 hover:text-orange-500 transition-colors"
+                title="Reload Page"
+              >
+                <RefreshCw size={18} />
+              </button>
               <div className="h-8 w-px bg-white/10"></div>
               <button 
                 onClick={handleLogout}

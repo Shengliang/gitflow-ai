@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Zap, Cpu, GitMerge, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { ShieldCheck, Zap, Cpu, GitMerge, CheckCircle2, AlertCircle, Info, Layers, ExternalLink } from 'lucide-react';
 
 export const JudgeView: React.FC = () => {
   const requirements = [
@@ -55,6 +55,41 @@ export const JudgeView: React.FC = () => {
           <p className="text-white/80 leading-relaxed">
             GitFlow AI is an intelligent orchestration layer for GitLab that solves the "Merge Hell" problem in large-scale engineering organizations. While most AI tools focus on writing code, we focus on the **Productivity Gap** that exists between code completion and production deployment. By automating conflict resolution and release queueing, we enable teams to move from manual bi-weekly syncs to continuous, AI-verified delivery.
           </p>
+        </div>
+      </section>
+
+      <section className="bg-[#1C1D21] border border-white/5 rounded-3xl p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Layers className="text-orange-500" size={24} />
+            <h3 className="text-xl font-bold text-white">Technical Architecture</h3>
+          </div>
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Visual Overview</p>
+        </div>
+        <p className="text-white/60 text-sm leading-relaxed">
+          The system architecture is designed for high availability and real-time synchronization. It leverages a React-based frontend, a Firebase backend for state management, and a Gemini-powered AI orchestrator that interacts directly with the GitLab API.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+            <p className="text-xs font-bold text-orange-500 uppercase tracking-widest">Architecture Diagram</p>
+            <p className="text-sm text-white/80">View the full SVG and Mermaid diagrams in the Live Demo section.</p>
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: 'demo' }))}
+              className="mt-4 flex items-center gap-2 text-sm font-bold text-white hover:text-orange-500 transition-colors"
+            >
+              View Diagram <ExternalLink size={14} />
+            </button>
+          </div>
+          <div className="flex-1 p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+            <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Live Presentation</p>
+            <p className="text-sm text-white/80">Watch the 3-minute AI-guided tour of the system architecture.</p>
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: 'demo' }))}
+              className="mt-4 flex items-center gap-2 text-sm font-bold text-white hover:text-emerald-500 transition-colors"
+            >
+              Start Demo <ExternalLink size={14} />
+            </button>
+          </div>
         </div>
       </section>
 

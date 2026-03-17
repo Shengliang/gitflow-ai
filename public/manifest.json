@@ -1,0 +1,21 @@
+{
+  "name": "GitFlow AI Orchestrator",
+  "short_name": "GitFlow AI",
+  "description": "AI-powered merge orchestration for GitLab",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0B0D",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/gitflow/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/gitflow/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

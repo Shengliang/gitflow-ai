@@ -15,9 +15,13 @@ import {
   Terminal,
   Settings2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Play,
+  Square,
+  Volume2,
+  Mic
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 // Architecture Diagram SVG
 const ArchitectureSVG = () => (
@@ -79,11 +83,15 @@ const MermaidDiagram = () => (
 
 export const DemoView: React.FC = () => {
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', content: string }[]>([
-    { role: 'bot', content: "Hello! I'm the GitFlow AI demo agent. I can explain how our system automates the SDLC, resolves conflicts, and integrates with your workflow. What would you like to know first?" }
+    { role: 'bot', content: "Hello! I'm the GitFlow AI demo agent. I can explain how our system automates the SDLC, resolves conflicts, and integrates with your workflow. Click 'Start Presentation' for a guided 3-minute tour!" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isPresenting, setIsPresenting] = useState(false);
+  const [presentationStep, setPresentationStep] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const liveSessionRef = useRef<any>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -91,67 +99,169 @@ export const DemoView: React.FC = () => {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (text?: string) => {
+    const userMsg = text || input;
+    if (!userMsg.trim()) return;
     
-    const userMsg = input;
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
-    setInput('');
+    if (!text) setInput('');
     setIsTyping(true);
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = ai.models.generateContent({
+      const model = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
-          { role: 'user', parts: [{ text: `You are a demo agent for GitFlow AI, a hackathon project. 
-          Project Details:
-          - Built with React, Tailwind, Firebase, and Gemini.
-          - Solves "Merge Hell" by automating bi-weekly merges.
-          - Features: AI Conflict Resolution, Automated Test Diagnostics, Real-time Dashboard.
-          - Conflict Resolution: Tries 4 options (Prefer A, Prefer B, Keep Both, User Override).
-          - Notifications: Sends email via SendGrid/Firebase when AI fails to resolve.
-          - Integration: Webhooks for custom CI/CD.
-          
+          { role: 'user', parts: [{ text: `You are a demo agent for GitFlow AI. 
+          Context: Hackathon project for GitLab. 
           User asked: ${userMsg}` }] }
         ]
       });
 
-      const response = await model;
-      setMessages(prev => [...prev, { role: 'bot', content: response.text || "I'm sorry, I couldn't process that." }]);
+      setMessages(prev => [...prev, { role: 'bot', content: model.text || "I'm sorry, I couldn't process that." }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'bot', content: "I'm having trouble connecting to my brain right now. Please try again!" }]);
+      setMessages(prev => [...prev, { role: 'bot', content: "I'm having trouble connecting to my brain right now." }]);
     } finally {
       setIsTyping(false);
     }
   };
 
+  const startPresentation = async () => {
+    setIsPresenting(true);
+    setMessages(prev => [...prev, { role: 'bot', content: "Starting the 3-minute Live Presentation... Please ensure your volume is up!" }]);
+    
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      // Initialize Audio Context for playback
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+
+      const sessionPromise = ai.live.connect({
+        model: "gemini-2.5-flash-native-audio-preview-09-2025",
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } }
+          },
+          systemInstruction: "You are a professional hackathon presenter for GitFlow AI. Your goal is to deliver a high-energy, 3-minute presentation. Cover: 1. The problem of Merge Hell. 2. Our AI Orchestration solution. 3. Semantic conflict resolution with 4 options. 4. CI/CD integration. Keep it concise and engaging."
+        },
+        callbacks: {
+          onopen: () => {
+            sessionPromise.then(session => 
+              session.sendRealtimeInput({ text: "Start the 3-minute hackathon presentation now. Introduce yourself and the project." })
+            );
+          },
+          onmessage: async (message) => {
+            if (message.serverContent?.modelTurn?.parts[0]?.inlineData?.data) {
+              const base64Audio = message.serverContent.modelTurn.parts[0].inlineData.data;
+              const audioData = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0)).buffer;
+              
+              // Simple PCM playback (in a real app, we'd use a queue for gapless)
+              const audioBuffer = await audioContextRef.current!.decodeAudioData(audioData);
+              const source = audioContextRef.current!.createBufferSource();
+              source.buffer = audioBuffer;
+              source.connect(audioContextRef.current!.destination);
+              source.start();
+            }
+            
+            if (message.serverContent?.modelTurn?.parts[0]?.text) {
+              setMessages(prev => [...prev, { role: 'bot', content: message.serverContent!.modelTurn!.parts[0].text! }]);
+            }
+          },
+          onclose: () => setIsPresenting(false),
+          onerror: (err) => {
+            console.error(err);
+            setIsPresenting(false);
+          }
+        }
+      });
+
+      liveSessionRef.current = await sessionPromise;
+    } catch (err) {
+      console.error(err);
+      setIsPresenting(false);
+      setMessages(prev => [...prev, { role: 'bot', content: "Failed to start live session. Please check your microphone permissions and API key." }]);
+    }
+  };
+
+  const stopPresentation = () => {
+    if (liveSessionRef.current) {
+      liveSessionRef.current.close();
+    }
+    setIsPresenting(false);
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-16 pb-24">
       {/* Hero Section */}
-      <section className="text-center space-y-4">
+      <section className="text-center space-y-6">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-500 text-xs font-bold uppercase tracking-widest">
           <Bot size={14} />
-          Interactive Demo
+          Live Presentation Mode
         </div>
         <h1 className="text-5xl font-bold tracking-tight text-white">Experience GitFlow AI</h1>
         <p className="text-white/40 max-w-2xl mx-auto">
-          Explore the architecture, the logic, and the AI-driven orchestration that powers the next generation of GitLab productivity.
+          Click the button below to start a 3-minute guided presentation powered by the Gemini Multimodal Live API.
         </p>
+        
+        <div className="flex justify-center gap-4">
+          {!isPresenting ? (
+            <button 
+              onClick={startPresentation}
+              className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
+            >
+              <Play size={20} className="group-hover:scale-110 transition-transform" />
+              Start 3-Min Presentation
+            </button>
+          ) : (
+            <button 
+              onClick={stopPresentation}
+              className="flex items-center gap-3 bg-red-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+            >
+              <Square size={20} />
+              Stop Presentation
+            </button>
+          )}
+        </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Left Column: Chat Agent */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-[#1C1D21] border border-white/5 rounded-[32px] overflow-hidden flex flex-col h-[600px] shadow-2xl">
-            <div className="p-6 border-b border-white/5 bg-white/5 flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                <Bot className="text-white" size={20} />
+          <div className="bg-[#1C1D21] border border-white/5 rounded-[32px] overflow-hidden flex flex-col h-[600px] shadow-2xl relative">
+            {isPresenting && (
+              <div className="absolute inset-0 bg-orange-500/5 backdrop-blur-[2px] z-10 pointer-events-none flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex gap-1">
+                    {[0, 1, 2, 3].map(i => (
+                      <motion.div 
+                        key={i}
+                        animate={{ height: [10, 30, 10] }}
+                        transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.1 }}
+                        className="w-1 bg-orange-500 rounded-full"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Live Presenting...</span>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-white">Demo Assistant</h3>
-                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Online • Gemini Pro</p>
+            )}
+            
+            <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                  <Bot className="text-white" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">Demo Assistant</h3>
+                  <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
+                    {isPresenting ? 'Live Audio Active' : 'Online • Gemini Pro'}
+                  </p>
+                </div>
               </div>
+              {isPresenting && <Volume2 className="text-orange-500 animate-pulse" size={18} />}
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
@@ -184,12 +294,14 @@ export const DemoView: React.FC = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Ask about the architecture..."
-                  className="w-full bg-[#0A0B0D] border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder={isPresenting ? "Listening..." : "Ask about the architecture..."}
+                  disabled={isPresenting}
+                  className="w-full bg-[#0A0B0D] border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors disabled:opacity-50"
                 />
                 <button 
-                  onClick={handleSend}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white hover:bg-orange-600 transition-colors"
+                  onClick={() => handleSend()}
+                  disabled={isPresenting}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white hover:bg-orange-600 transition-colors disabled:opacity-50"
                 >
                   <Send size={16} />
                 </button>
