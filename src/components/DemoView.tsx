@@ -99,6 +99,8 @@ export const DemoView: React.FC = () => {
     }
   }, [messages]);
 
+  const nextStartTimeRef = useRef<number>(0);
+
   const handleSend = async (text?: string) => {
     const userMsg = text || input;
     if (!userMsg.trim()) return;
@@ -137,6 +139,12 @@ export const DemoView: React.FC = () => {
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       }
+      
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
+      nextStartTimeRef.current = audioContextRef.current.currentTime;
 
       const sessionPromise = ai.live.connect({
         model: "gemini-2.5-flash-native-audio-preview-09-2025",
@@ -145,25 +153,52 @@ export const DemoView: React.FC = () => {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } }
           },
-          systemInstruction: "You are a professional hackathon presenter for GitFlow AI. Your goal is to deliver a high-energy, 3-minute presentation. Cover: 1. The problem of Merge Hell. 2. Our AI Orchestration solution. 3. Semantic conflict resolution with 4 options. 4. CI/CD integration. Keep it concise and engaging."
+          systemInstruction: `You are a professional hackathon presenter for GitFlow AI. 
+          Your goal is to deliver a continuous, high-energy, 3-minute monologue presentation for a hackathon recording. 
+          DO NOT wait for user input. Speak continuously and thoroughly until you have covered all points in detail.
+
+          Structure your presentation as follows:
+          1. Introduction (30s): Introduce yourself as the GitFlow AI Orchestrator. Explain the "Merge Hell" problem in large teams where manual conflict resolution slows down the SDLC.
+          2. The Solution (45s): Describe how GitFlow AI uses Gemini Pro to orchestrate merges. Explain the real-time sync with Firebase and the React-based dashboard judges are seeing.
+          3. Conflict Resolution Deep Dive (60s): Explain our 4-option semantic resolution strategy (Prefer A, Prefer B, Keep Both, User Override). Mention how we use Gemini to understand the *intent* of the code, not just the text.
+          4. Integration & Safety (30s): Talk about CI/CD integration via webhooks and our "Safety First" policy (no force-pushes, temporary staging branches).
+          5. Conclusion (15s): Summarize the impact on productivity and invite judges to explore the dashboard.
+
+          Be enthusiastic, professional, and thorough. Aim for exactly 3 minutes of spoken content.`
         },
         callbacks: {
           onopen: () => {
             sessionPromise.then(session => 
-              session.sendRealtimeInput({ text: "Start the 3-minute hackathon presentation now. Introduce yourself and the project." })
+              session.sendRealtimeInput({ text: "Please begin your full 3-minute continuous hackathon presentation now. Do not stop until you have finished all sections. Start now." })
             );
           },
           onmessage: async (message) => {
             if (message.serverContent?.modelTurn?.parts[0]?.inlineData?.data) {
               const base64Audio = message.serverContent.modelTurn.parts[0].inlineData.data;
-              const audioData = Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0)).buffer;
-              
-              // Simple PCM playback (in a real app, we'd use a queue for gapless)
-              const audioBuffer = await audioContextRef.current!.decodeAudioData(audioData);
+              const binaryString = atob(base64Audio);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const pcmData = new Int16Array(bytes.buffer);
+              const float32Data = new Float32Array(pcmData.length);
+              for (let i = 0; i < pcmData.length; i++) {
+                float32Data[i] = pcmData[i] / 32768.0;
+              }
+
+              const audioBuffer = audioContextRef.current!.createBuffer(1, float32Data.length, 24000);
+              audioBuffer.getChannelData(0).set(float32Data);
+
               const source = audioContextRef.current!.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(audioContextRef.current!.destination);
-              source.start();
+              
+              const currentTime = audioContextRef.current!.currentTime;
+              if (nextStartTimeRef.current < currentTime) {
+                nextStartTimeRef.current = currentTime;
+              }
+              source.start(nextStartTimeRef.current);
+              nextStartTimeRef.current += audioBuffer.duration;
             }
             
             if (message.serverContent?.modelTurn?.parts[0]?.text) {
