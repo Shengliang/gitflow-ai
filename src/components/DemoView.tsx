@@ -358,7 +358,7 @@ export const DemoView: React.FC = () => {
           <section className="space-y-6">
             <div className="flex items-center gap-3">
               <Layers className="text-orange-500" size={24} />
-              <h2 className="text-2xl font-bold text-white">0. System Architecture</h2>
+              <h2 className="text-2xl font-bold text-white">1. System Architecture</h2>
             </div>
             <div className="space-y-4">
               <ArchitectureSVG />
@@ -396,14 +396,14 @@ export const DemoView: React.FC = () => {
           <section className="bg-[#1C1D21] border border-white/5 rounded-[32px] p-8 space-y-8">
             <div className="flex items-center gap-3">
               <GitMerge className="text-orange-500" size={24} />
-              <h2 className="text-2xl font-bold text-white">7. Conflict Resolution Deep Dive</h2>
+              <h2 className="text-2xl font-bold text-white">4. Conflict Resolution Deep Dive</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <h4 className="text-white font-bold flex items-center gap-2">
                   <ShieldCheck size={18} className="text-emerald-500" />
-                  a) Policy & Rules
+                  5. Policy & Rules
                 </h4>
                 <p className="text-sm text-white/40 leading-relaxed">
                   Our system follows a "Safety First" policy. AI never force-pushes. Every resolution is staged in a temporary branch for verification. We support **Custom Override Rules** (e.g., "Always prefer Master for CSS files") via the Settings page.
@@ -413,7 +413,7 @@ export const DemoView: React.FC = () => {
               <div className="space-y-4">
                 <h4 className="text-white font-bold flex items-center gap-2">
                   <Mail size={18} className="text-orange-500" />
-                  5. Email Notifications
+                  6. Email Notifications
                 </h4>
                 <p className="text-sm text-white/40 leading-relaxed">
                   When Gemini detects a "Semantic Ambiguity" (where intent is unclear), it pauses the merge and triggers a **Firebase Cloud Function** to email the PR author and the Team Lead with a direct link to the manual resolution UI.
@@ -422,7 +422,7 @@ export const DemoView: React.FC = () => {
             </div>
 
             <div className="pt-8 border-t border-white/5">
-              <h4 className="text-white font-bold mb-6">b) The 4-Option Resolution Strategy</h4>
+              <h4 className="text-white font-bold mb-6">7. The 4-Option Resolution Strategy</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { title: "Option 1", label: "Prefer A", desc: "Discard changes from source branch.", color: "border-blue-500/30 bg-blue-500/5" },
@@ -446,7 +446,7 @@ export const DemoView: React.FC = () => {
               <TestTube className="text-white" size={32} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-bold text-white">6. Custom Test Integration</h3>
+              <h3 className="text-xl font-bold text-white">8. Custom Test Integration</h3>
               <p className="text-sm text-white/60 leading-relaxed">
                 GitFlow AI exposes a **Generic Webhook API**. You can point your Jenkins, GitHub Actions, or custom shell scripts to our endpoint. We ingest JUnit XML or JSON reports to determine if an AI-resolved merge is safe to land.
               </p>
