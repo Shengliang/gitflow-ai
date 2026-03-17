@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, GitPullRequest, LayoutDashboard, Settings, Users, Zap, ShieldCheck, Bot, Globe } from 'lucide-react';
+import { GitBranch, GitPullRequest, LayoutDashboard, Settings, Users, Zap, ShieldCheck, Bot, Globe, ListOrdered } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -14,7 +14,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     { id: 'prs', icon: GitPullRequest, label: 'Pull Requests' },
     { id: 'teams', icon: Users, label: 'Teams' },
     { id: 'queue', icon: Zap, label: 'Merge Queues' },
-    { id: 'demo', icon: Bot, label: 'Live Demo' },
+    {id: 'demo', icon: Bot, label: 'Live Demo' },
+    { id: 'roadmap', icon: ListOrdered, label: 'Roadmap' },
     { id: 'judge', icon: ShieldCheck, label: "Judge's Guide" },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];

@@ -11,6 +11,7 @@ import { BranchGraph } from './components/BranchGraph';
 import { JudgeView } from './components/JudgeView';
 import { DemoView } from './components/DemoView';
 import { RepoView } from './components/RepoView';
+import { RoadmapView } from './components/RoadmapView';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
 import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -385,17 +386,38 @@ export default function App() {
               className="space-y-8"
             >
               {/* Banner */}
-              <div className="relative h-48 rounded-[32px] overflow-hidden border border-white/5 shadow-2xl">
+              <div className="relative h-64 rounded-[40px] overflow-hidden border border-white/10 shadow-2xl group">
                 <img 
-                  src="https://picsum.photos/seed/gitflow-tech/1200/400" 
+                  src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80" 
                   alt="GitFlow AI Banner" 
-                  className="w-full h-full object-cover opacity-50"
+                  className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0B0D] via-transparent to-transparent"></div>
-                <div className="absolute inset-0 flex flex-col justify-center px-12">
-                  <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase mb-2">System Overview</h2>
-                  <p className="text-orange-500 font-bold uppercase tracking-[0.4em] text-[10px]">Real-time Semantic Orchestration</p>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0B0D] via-[#0A0B0D]/80 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-transparent to-transparent"></div>
+                <div className="absolute inset-0 flex flex-col justify-center px-16">
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <h2 className="text-5xl font-black text-white tracking-tighter italic uppercase mb-3 leading-none">
+                      System <span className="text-orange-500">Orchestration</span>
+                    </h2>
+                    <div className="flex items-center gap-4">
+                      <p className="text-white/60 font-bold uppercase tracking-[0.4em] text-[10px] bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                        Active Node: <span className="text-emerald-400">US-WEST-1</span>
+                      </p>
+                      <div className="h-1 w-24 bg-gradient-to-r from-orange-500 to-transparent rounded-full"></div>
+                    </div>
+                  </motion.div>
+                </div>
+                
+                {/* Decorative Elements */}
+                <div className="absolute top-8 right-8 flex gap-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-orange-500/50 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}></div>
+                  ))}
                 </div>
               </div>
 
@@ -773,6 +795,7 @@ export default function App() {
           {activeTab === 'judge' && <JudgeView />}
           {activeTab === 'demo' && <DemoView />}
           {activeTab === 'repositories' && <RepoView />}
+          {activeTab === 'roadmap' && <RoadmapView />}
         </AnimatePresence>
 
         {error && <ErrorDisplay error={error} />}

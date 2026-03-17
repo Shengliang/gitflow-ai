@@ -70,16 +70,31 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "shengliang.song@gmail.com" && request.auth.token.email_verified == true));
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "shengliang.song@gmail.com" && 
+           request.auth.token.email_verified == true)
+        );
     }
 
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validString(field, minLen, maxLen) {
+      return request.resource.data[field] is string && 
+             request.resource.data[field].size() >= minLen && 
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function validList(field, maxItems) {
+      return request.resource.data[field] is list && 
+             request.resource.data[field].size() <= maxItems;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
     }
 
     function isValidEmail(email) {
@@ -92,19 +107,21 @@ service cloud.firestore {
 
     function isValidBranch(data) {
       return hasRequiredFields(['name', 'type']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             hasOnlyAllowedFields(['name', 'type', 'teamId', 'lastMergedAt']) &&
+             validString('name', 1, 100) &&
              data.type in ['master', 'project', 'release'] &&
-             (!('teamId' in data) || data.teamId is string) &&
+             (!('teamId' in data) || (data.teamId is string && data.teamId.size() < 50)) &&
              (!('lastMergedAt' in data) || data.lastMergedAt is number);
     }
 
     function isValidPullRequest(data) {
       return hasRequiredFields(['title', 'author', 'authorUid', 'sourceBranch', 'targetBranch', 'status', 'createdAt']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.author is string &&
-             data.authorUid is string &&
-             data.sourceBranch is string &&
-             data.targetBranch is string &&
+             hasOnlyAllowedFields(['title', 'author', 'authorUid', 'sourceBranch', 'targetBranch', 'status', 'createdAt', 'conflictDetails', 'testResults']) &&
+             validString('title', 1, 200) &&
+             validString('author', 1, 100) &&
+             validString('authorUid', 1, 128) &&
+             validString('sourceBranch', 1, 100) &&
+             validString('targetBranch', 1, 100) &&
              data.status in ['open', 'merging', 'merged', 'conflict', 'failed_tests'] &&
              data.createdAt is number &&
              (!('conflictDetails' in data) || (data.conflictDetails is string && data.conflictDetails.size() < 5000)) &&
@@ -113,33 +130,37 @@ service cloud.firestore {
 
     function isValidMergeJob(data) {
       return hasRequiredFields(['prId', 'status', 'progress', 'logs']) &&
-             data.prId is string &&
+             hasOnlyAllowedFields(['prId', 'status', 'progress', 'logs', 'aiResolution']) &&
+             validString('prId', 1, 128) &&
              data.status in ['queued', 'resolving_conflicts', 'running_tests', 'completed', 'failed'] &&
              data.progress is number && data.progress >= 0 && data.progress <= 100 &&
-             data.logs is list && data.logs.size() < 100 &&
-             (!('aiResolution' in data) || data.aiResolution is string);
+             validList('logs', 100) &&
+             (!('aiResolution' in data) || (data.aiResolution is string && data.aiResolution.size() < 5000));
     }
 
     function isValidTeam(data) {
       return hasRequiredFields(['name', 'engineers']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.engineers is list && data.engineers.size() < 50;
+             hasOnlyAllowedFields(['name', 'engineers']) &&
+             validString('name', 1, 100) &&
+             validList('engineers', 50);
     }
 
     function isValidMergeQueue(data) {
       return hasRequiredFields(['name', 'targetBranch', 'strategy', 'batchSize', 'leafBranches', 'isActive', 'createdAt']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.targetBranch is string &&
+             hasOnlyAllowedFields(['name', 'targetBranch', 'strategy', 'batchSize', 'leafBranches', 'isActive', 'createdAt']) &&
+             validString('name', 1, 100) &&
+             validString('targetBranch', 1, 100) &&
              data.strategy in ['binary_tree', 'fifo'] &&
-             data.batchSize is number &&
-             data.leafBranches is list && data.leafBranches.size() < 100 &&
+             data.batchSize is number && data.batchSize > 0 && data.batchSize <= 50 &&
+             validList('leafBranches', 100) &&
              data.isActive is bool &&
              data.createdAt is number;
     }
 
     function isValidUser(data) {
       return hasRequiredFields(['displayName', 'email', 'role']) &&
-             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             hasOnlyAllowedFields(['displayName', 'email', 'role']) &&
+             validString('displayName', 1, 100) &&
              isValidEmail(data.email) &&
              data.role in ['admin', 'engineer'];
     }
@@ -149,9 +170,10 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'engineer';
-      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
       allow delete: if isAdmin();
     }
 
@@ -162,16 +184,19 @@ service cloud.firestore {
 
     match /pullRequests/{prId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidPullRequest(request.resource.data) && request.resource.data.authorUid == request.auth.uid;
+      allow create: if isAuthenticated() && isValidPullRequest(request.resource.data) && 
+                    request.resource.data.authorUid == request.auth.uid;
       allow update: if isAuthenticated() && isValidPullRequest(request.resource.data) && 
-                    (request.resource.data.authorUid == resource.data.authorUid) &&
+                    request.resource.data.authorUid == resource.data.authorUid &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
                     (request.auth.uid == resource.data.authorUid || isAdmin());
       allow delete: if isAdmin();
     }
 
     match /mergeJobs/{jobId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && isValidMergeJob(request.resource.data);
+      allow create: if isAuthenticated() && isValidMergeJob(request.resource.data);
+      allow update: if isAuthenticated() && isValidMergeJob(request.resource.data);
       allow delete: if isAdmin();
     }
 
@@ -182,7 +207,8 @@ service cloud.firestore {
 
     match /mergeQueues/{queueId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && isValidMergeQueue(request.resource.data);
+      allow create: if isAuthenticated() && isValidMergeQueue(request.resource.data);
+      allow update: if isAuthenticated() && isValidMergeQueue(request.resource.data);
       allow delete: if isAdmin();
     }
 

@@ -243,14 +243,24 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
           <div ref={docRef} id="design-doc-content" className="max-w-4xl mx-auto space-y-16 pb-24">
             
             {/* Cover Page */}
-            <section className="min-h-[800px] flex flex-col justify-center items-center text-center page-break-after border-b border-zinc-900 pb-24">
-              <div className="w-32 h-32 bg-blue-600 rounded-[40px] flex items-center justify-center mb-12 shadow-2xl shadow-blue-600/40">
+            <section className="min-h-[800px] flex flex-col justify-center items-center text-center page-break-after border-b border-zinc-900 pb-24 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                <img 
+                  src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80" 
+                  alt="Background Pattern" 
+                  className="w-full h-full object-cover grayscale"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-transparent to-zinc-950"></div>
+              </div>
+              
+              <div className="relative z-10 w-32 h-32 bg-blue-600 rounded-[40px] flex items-center justify-center mb-12 shadow-2xl shadow-blue-600/40">
                 <GitBranch size={64} className="text-white" />
               </div>
-              <h1 className="text-8xl font-black text-white mb-6 tracking-tighter italic uppercase">GitFlow AI</h1>
-              <p className="text-2xl text-blue-400 font-bold uppercase tracking-[0.6em] mb-24">Technical Specification</p>
+              <h1 className="relative z-10 text-8xl font-black text-white mb-6 tracking-tighter italic uppercase">GitFlow AI</h1>
+              <p className="relative z-10 text-2xl text-blue-400 font-bold uppercase tracking-[0.6em] mb-24">Technical Specification</p>
               
-              <div className="grid grid-cols-2 gap-12 w-full max-w-2xl text-left border-t border-zinc-800 pt-12">
+              <div className="relative z-10 grid grid-cols-2 gap-12 w-full max-w-2xl text-left border-t border-zinc-800 pt-12">
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Document Version</p>
                   <p className="text-white font-bold">v1.0.4 (Stable)</p>

@@ -69,6 +69,70 @@ const ArchitectureSVG = () => (
   </svg>
 );
 
+const MergeStrategiesSVG = () => (
+  <svg viewBox="0 0 800 400" className="w-full h-auto bg-white/5 rounded-3xl p-8 border border-white/10">
+    {/* Mode A: Binary Tree */}
+    <text x="200" y="40" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">Mode A: Binary Tree (Divide & Conquer)</text>
+    <g transform="translate(50, 80)">
+      {/* Leaves */}
+      {[0, 1, 2, 3].map(i => (
+        <rect key={i} x={i * 80} y="200" width="60" height="30" rx="5" fill="#3b82f6" fillOpacity="0.2" stroke="#3b82f6" />
+      ))}
+      {/* Level 1 Merges */}
+      <rect x="40" y="120" width="60" height="30" rx="5" fill="#8b5cf6" fillOpacity="0.2" stroke="#8b5cf6" />
+      <rect x="200" y="120" width="60" height="30" rx="5" fill="#8b5cf6" fillOpacity="0.2" stroke="#8b5cf6" />
+      {/* Root */}
+      <rect x="120" y="40" width="60" height="30" rx="5" fill="#f97316" fillOpacity="0.2" stroke="#f97316" />
+      
+      {/* Connectors */}
+      <path d="M 30 200 L 70 150 M 110 200 L 70 150" stroke="#94a3b8" fill="none" />
+      <path d="M 190 200 L 230 150 M 270 200 L 230 150" stroke="#94a3b8" fill="none" />
+      <path d="M 70 120 L 150 70 M 230 120 L 150 70" stroke="#94a3b8" fill="none" />
+    </g>
+
+    {/* Mode B: FIFO Batching */}
+    <text x="600" y="40" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">Mode B: FIFO Batching (Atomic Unions)</text>
+    <g transform="translate(450, 80)">
+      <rect x="0" y="40" width="300" height="200" rx="10" fill="white" fillOpacity="0.05" stroke="white" strokeOpacity="0.1" strokeDasharray="5,5" />
+      <text x="150" y="30" textAnchor="middle" fill="#94a3b8" fontSize="10">Atomic Union Group</text>
+      
+      <rect x="20" y="60" width="80" height="30" rx="5" fill="#10b981" fillOpacity="0.2" stroke="#10b981" />
+      <rect x="110" y="60" width="80" height="30" rx="5" fill="#10b981" fillOpacity="0.2" stroke="#10b981" />
+      <rect x="200" y="60" width="80" height="30" rx="5" fill="#10b981" fillOpacity="0.2" stroke="#10b981" />
+      
+      <path d="M 150 90 L 150 150" stroke="#94a3b8" strokeWidth="2" markerEnd="url(#arrowhead)" />
+      <rect x="100" y="150" width="100" height="40" rx="5" fill="#f97316" fillOpacity="0.2" stroke="#f97316" />
+      <text x="150" y="175" textAnchor="middle" fill="white" fontSize="10">Master Head</text>
+    </g>
+  </svg>
+);
+
+const RebaseCycleSVG = () => (
+  <svg viewBox="0 0 800 300" className="w-full h-auto bg-white/5 rounded-3xl p-8 border border-white/10">
+    <text x="400" y="30" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">The Tag-Based Rebase Cycle</text>
+    
+    {/* Timeline */}
+    <line x1="50" y1="150" x2="750" y2="150" stroke="#94a3b8" strokeWidth="2" />
+    
+    {/* Tags */}
+    <circle cx="100" cy="150" r="6" fill="#f97316" />
+    <text x="100" y="180" textAnchor="middle" fill="#f97316" fontSize="10">Tag-X</text>
+    
+    <circle cx="300" cy="150" r="6" fill="#f97316" />
+    <text x="300" y="180" textAnchor="middle" fill="#f97316" fontSize="10">Tag-Y (Merge Point)</text>
+    
+    {/* Rebase Action */}
+    <path d="M 300 150 Q 450 50 600 150" fill="none" stroke="#3b82f6" strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrowhead)" />
+    <text x="450" y="80" textAnchor="middle" fill="#3b82f6" fontSize="12" fontWeight="bold">Automated Rebase of Pending PRs</text>
+    
+    <circle cx="600" cy="150" r="6" fill="#10b981" />
+    <text x="600" y="180" textAnchor="middle" fill="#10b981" fontSize="10">New Master Head (Y+1)</text>
+    
+    <rect x="500" y="220" width="200" height="40" rx="5" fill="#10b981" fillOpacity="0.1" stroke="#10b981" strokeWidth="1" />
+    <text x="600" y="245" textAnchor="middle" fill="white" fontSize="10">Fresh Project Branch Cut</text>
+  </svg>
+);
+
 const MermaidDiagram = () => (
   <pre className="bg-black/40 p-6 rounded-2xl border border-white/10 font-mono text-xs text-orange-400 overflow-x-auto">
 {`graph TD
@@ -92,7 +156,8 @@ export const DemoView: React.FC = () => {
   const [messages, setMessages] = useState<{ role: 'user' | 'bot', content: string }[]>([
     { role: 'bot', content: "Hello! I'm the GitFlow AI demo agent. I can explain how our system automates the SDLC, resolves conflicts, and integrates with your workflow. Click 'Start Presentation' for a guided 4-minute tour!" }
   ]);
-  const [transcript, setTranscript] = useState<string[]>([]);
+  const [transcript, setTranscript] = useState<string>('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
@@ -126,7 +191,7 @@ export const DemoView: React.FC = () => {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const model = await ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
           { role: 'user', parts: [{ text: `You are a demo agent for GitFlow AI. 
@@ -135,9 +200,14 @@ export const DemoView: React.FC = () => {
         ]
       });
 
-      setMessages(prev => [...prev, { role: 'bot', content: model.text || "I'm sorry, I couldn't process that." }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'bot', content: "I'm having trouble connecting to my brain right now." }]);
+      setMessages(prev => [...prev, { role: 'bot', content: response.text || "I'm sorry, I couldn't process that." }]);
+    } catch (err: any) {
+      console.error('Chat Error:', err);
+      const isUnavailable = err?.message?.includes('unavailable') || err?.message?.includes('503');
+      const errorMessage = isUnavailable 
+        ? "The AI service is currently overloaded. Please wait a moment and try again." 
+        : "I'm having trouble connecting to my brain right now. Please try again in a few seconds.";
+      setMessages(prev => [...prev, { role: 'bot', content: errorMessage }]);
     } finally {
       setIsTyping(false);
     }
@@ -145,8 +215,8 @@ export const DemoView: React.FC = () => {
 
   const startPresentation = async () => {
     setIsPresenting(true);
-    setTranscript([]);
-    setMessages(prev => [...prev, { role: 'bot', content: "Starting the 4-minute Live Presentation... Please ensure your volume is up!" }]);
+    setTranscript('');
+    setMessages(prev => [...prev, { role: 'bot', content: "Starting the 3-minute Live Presentation... Please ensure your volume is up!" }]);
     
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -171,35 +241,34 @@ export const DemoView: React.FC = () => {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } }
           },
           systemInstruction: `You are a professional hackathon presenter for GitFlow AI. 
-          Your goal is to deliver a continuous, high-energy, 4-minute monologue presentation for a hackathon recording. 
+          Your goal is to deliver a continuous, high-energy, 3-minute monologue presentation for a hackathon recording. 
           DO NOT wait for user input. Speak continuously and thoroughly until you have covered all points in detail.
 
           Structure your presentation as follows:
-          1. Introduction (30s): Introduce yourself as the GitFlow AI Orchestrator. Explain the "Merge Hell" problem in large teams where manual conflict resolution slows down the SDLC.
-          2. The Solution & AI Review (45s): Describe how GitFlow AI uses Gemini Pro to orchestrate merges. Highlight our **AI Auto Code Review** feature that runs during the PR process, providing semantic feedback before a merge is even attempted.
-          3. Advanced Merge Orchestration (75s): Explain how we handle complex topologies. 
-             - For single branches, we manage N individual commits with intelligent squashing and rebase logic.
-             - For multi-branch scenarios (e.g., 8 branches to Master), we support two configurable modes:
-               * Mode A (Divide & Conquer): A binary tree merge strategy where branches are treated as leaves, merged in pairs iteratively until reaching the root Master branch.
-               * Mode B (FIFO Batching): Merging PRs in batches with user-configurable batch sizes.
-             - Mention **Atomic Union Groups**: AI can auto-select and group PRs to be merged in an "all-or-nothing" atomic way, ensuring system integrity.
-          4. The Tag-Based Rebase Cycle (45s): Explain our precise post-merge synchronization. We use a sophisticated tagging strategy: after merging a range from Tag-X to Tag-Y into Master, we immediately cut a fresh project branch from the new Master head. Then, we orchestrate an automated rebase of all pending PRs from the [Y+1 to current] range onto this new base. This ensures every developer is working against the latest Master state, resolving conflicts incrementally and keeping the next merge cycle clean.
-          5. Conflict Resolution Deep Dive (45s): Explain our 4-option semantic resolution strategy (Prefer A, Prefer B, Keep Both, User Override). Mention how we use Gemini to understand the *intent* of the code.
-          6. Integration & Safety (30s): Talk about CI/CD integration via webhooks and our "Safety First" policy (no force-pushes, temporary staging branches).
-          7. Conclusion (15s): Summarize the impact on productivity and invite judges to explore the dashboard.
+          1. Introduction (20s): Introduce yourself as the GitFlow AI Orchestrator. Explain the "Merge Hell" problem in large teams.
+          2. The Solution & AI Review (30s): Describe how GitFlow AI uses Gemini Pro to orchestrate merges and highlight AI Auto Code Review.
+          3. Advanced Merge Orchestration (60s): Explain complex topologies. 
+             - Mode A (Divide & Conquer): Binary tree merge strategy.
+             - Mode B (FIFO Batching): Merging PRs in batches.
+             - Mention Atomic Union Groups for system integrity.
+          4. The Tag-Based Rebase Cycle (30s): Explain the post-merge synchronization strategy using tags and automated rebasing.
+          5. Conflict Resolution Deep Dive (25s): Explain the 4-option semantic resolution strategy (Prefer A, Prefer B, Keep Both, User Override).
+          6. Integration & Safety (10s): Talk about CI/CD integration and "Safety First" policy.
+          7. Conclusion (5s): Summarize impact and invite judges to explore.
 
-          Be enthusiastic, professional, and thorough. Aim for a comprehensive 4-minute presentation.`
+          Be enthusiastic, professional, and thorough. Aim for a comprehensive 3-minute presentation.`
         },
         callbacks: {
           onopen: () => {
             sessionPromise.then(session => 
-              session.sendRealtimeInput({ text: "Please begin your full 4-minute continuous hackathon presentation now. Cover the advanced merge strategies (Mode A/B), Atomic Union Groups, AI Code Review, and the specific Tag-Based Rebase Cycle workflow in detail. Do not stop until you have finished all sections. Start now." })
+              session.sendRealtimeInput({ text: "Please begin your full 3-minute continuous hackathon presentation now. Cover the advanced merge strategies (Mode A/B), Atomic Union Groups, AI Code Review, and the specific Tag-Based Rebase Cycle workflow in detail. Do not stop until you have finished all sections. Start now." })
             );
           },
           onmessage: async (message) => {
             if (message.serverContent?.modelTurn?.parts) {
               for (const part of message.serverContent.modelTurn.parts) {
                 if (part.inlineData?.data) {
+                  setIsSpeaking(true);
                   const base64Audio = part.inlineData.data;
                   const binaryString = atob(base64Audio);
                   const bytes = new Uint8Array(binaryString.length);
@@ -231,16 +300,19 @@ export const DemoView: React.FC = () => {
                 
                 if (part.text) {
                   const text = part.text;
-                  setTranscript(prev => [...prev, text]);
-                  // Also add to chat messages for context
-                  setMessages(prev => [...prev, { role: 'bot', content: text }]);
+                  setTranscript(prev => prev + text);
                 }
               }
             }
             
+            if (message.serverContent?.turnComplete) {
+              setIsSpeaking(false);
+            }
+
             if (message.serverContent?.interrupted) {
               // Handle interruption if needed
               nextStartTimeRef.current = audioContextRef.current?.currentTime || 0;
+              setIsSpeaking(false);
             }
           },
           onclose: () => setIsPresenting(false),
@@ -252,10 +324,14 @@ export const DemoView: React.FC = () => {
       });
 
       liveSessionRef.current = await sessionPromise;
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Live Session Error:', err);
       setIsPresenting(false);
-      setMessages(prev => [...prev, { role: 'bot', content: "Failed to start live session. Please check your microphone permissions and API key." }]);
+      const isUnavailable = err?.message?.includes('unavailable') || err?.message?.includes('503');
+      const errorMessage = isUnavailable 
+        ? "The Multimodal Live service is currently unavailable due to high demand. Please try again in a minute." 
+        : "Failed to start live session. Please check your microphone permissions and try again.";
+      setMessages(prev => [...prev, { role: 'bot', content: errorMessage }]);
     }
   };
 
@@ -291,7 +367,7 @@ export const DemoView: React.FC = () => {
               className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
             >
               <Play size={20} className="group-hover:scale-110 transition-transform" />
-              Start 4-Min Presentation
+              Start 3-Min Presentation
             </button>
           ) : (
             <button 
@@ -331,21 +407,25 @@ export const DemoView: React.FC = () => {
             </div>
             <div 
               ref={transcriptRef}
-              className="p-8 h-48 overflow-y-auto scroll-smooth space-y-4 font-serif italic text-lg text-zinc-300 leading-relaxed"
+              className="p-8 h-48 overflow-y-auto scroll-smooth font-serif italic text-lg text-zinc-300 leading-relaxed whitespace-pre-wrap"
             >
               {transcript.length === 0 ? (
-                <p className="text-zinc-600 animate-pulse">Waiting for AI to begin speaking...</p>
+                <div className="flex flex-col gap-2">
+                  <p className="text-zinc-600 animate-pulse">Waiting for AI to begin speaking...</p>
+                  {isSpeaking && (
+                    <p className="text-orange-500/60 text-xs font-sans font-bold uppercase tracking-widest animate-pulse">
+                      Audio Stream Active • Generating Transcript...
+                    </p>
+                  )}
+                </div>
               ) : (
-                transcript.map((text, i) => (
-                  <motion.p 
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="border-l-2 border-orange-500/30 pl-4"
-                  >
-                    {text}
-                  </motion.p>
-                ))
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  {transcript}
+                  {isSpeaking && <span className="inline-block w-2 h-5 bg-orange-500 ml-1 animate-pulse" />}
+                </motion.div>
               )}
             </div>
           </motion.section>
@@ -452,25 +532,66 @@ export const DemoView: React.FC = () => {
             </div>
           </section>
 
+          {/* Advanced Merge Strategies */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <GitMerge className="text-orange-500" size={24} />
+              <h2 className="text-2xl font-bold text-white">2. Advanced Merge Orchestration</h2>
+            </div>
+            <div className="space-y-6">
+              <MergeStrategiesSVG />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+                  <h4 className="font-bold text-white mb-2">Mode A: Binary Tree</h4>
+                  <p className="text-sm text-white/60 leading-relaxed">
+                    A "Divide & Conquer" strategy for massive PR volumes. Branches are treated as leaves and merged in pairs iteratively. This isolates conflicts to smaller groups and allows parallel CI testing of intermediate states.
+                  </p>
+                </div>
+                <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+                  <h4 className="font-bold text-white mb-2">Mode B: FIFO Batching</h4>
+                  <p className="text-sm text-white/60 leading-relaxed">
+                    Merges PRs in sequential batches. AI identifies **Atomic Union Groups**—sets of PRs that are semantically linked and must be merged as a single unit to maintain system integrity.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Rebase Cycle */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Settings2 className="text-orange-500" size={24} />
+              <h2 className="text-2xl font-bold text-white">3. The Tag-Based Rebase Cycle</h2>
+            </div>
+            <div className="space-y-6">
+              <RebaseCycleSVG />
+              <div className="p-6 bg-orange-500/5 rounded-2xl border border-orange-500/10">
+                <p className="text-sm text-white/80 leading-relaxed">
+                  After a successful merge from Tag-X to Tag-Y, GitFlow AI immediately cuts a fresh project branch from the new Master head. It then orchestrates an **automated rebase** of all pending PRs onto this new base. This ensures developers are always working against the latest state, resolving conflicts incrementally.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Creation & Usage */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-emerald-400">
                 <Code2 size={20} />
-                <h3 className="font-bold">2. How it was created</h3>
+                <h3 className="font-bold">4. How it was created</h3>
               </div>
               <p className="text-sm text-white/60 leading-relaxed">
-                Built using a modern full-stack approach: **React 18** for the reactive UI, **Tailwind CSS** for the brutalist design system, and **Firebase** for real-time state synchronization. The "brain" is powered by **Gemini Pro**, orchestrated via a custom Node.js middleware that handles GitLab API interactions.
+                Built using a modern full-stack approach: **React 18** for the reactive UI, **Tailwind CSS** for the brutalist design system, and **Firebase** for real-time state synchronization. The "brain" is powered by **Gemini 3.1 Pro**, orchestrated via a custom Node.js middleware that handles GitLab API interactions and semantic analysis.
               </p>
             </section>
 
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-blue-400">
                 <Terminal size={20} />
-                <h3 className="font-bold">3. How to use the site</h3>
+                <h3 className="font-bold">5. How to use the site</h3>
               </div>
               <p className="text-sm text-white/60 leading-relaxed">
-                Connect your GitLab account, select your project branches, and configure your merge frequency. The dashboard will automatically track PRs, and you can trigger AI-assisted merges with a single click from the "Active Pull Requests" section.
+                Connect your GitLab account, select your project branches, and configure your merge frequency. The dashboard will automatically track PRs, and you can trigger AI-assisted merges with a single click. Use the **AI Auto Code Review** toggle to get semantic feedback before merging.
               </p>
             </section>
           </div>
@@ -478,28 +599,28 @@ export const DemoView: React.FC = () => {
           {/* Merge Conflict Deep Dive */}
           <section className="bg-[#1C1D21] border border-white/5 rounded-[32px] p-8 space-y-8">
             <div className="flex items-center gap-3">
-              <GitMerge className="text-orange-500" size={24} />
-              <h2 className="text-2xl font-bold text-white">4. Conflict Resolution Deep Dive</h2>
+              <ShieldCheck className="text-orange-500" size={24} />
+              <h2 className="text-2xl font-bold text-white">6. Conflict Resolution & Safety</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <h4 className="text-white font-bold flex items-center gap-2">
                   <ShieldCheck size={18} className="text-emerald-500" />
-                  5. Policy & Rules
+                  Safety First Policy
                 </h4>
                 <p className="text-sm text-white/40 leading-relaxed">
-                  Our system follows a "Safety First" policy. AI never force-pushes. Every resolution is staged in a temporary branch for verification. We support **Custom Override Rules** (e.g., "Always prefer Master for CSS files") via the Settings page.
+                  AI never force-pushes. Every resolution is staged in a temporary branch for verification. We integrate with **GitLab CI/CD** to ensure that every AI-resolved merge passes all tests before landing in the main branch.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <h4 className="text-white font-bold flex items-center gap-2">
-                  <Mail size={18} className="text-orange-500" />
-                  6. Email Notifications
+                  <Bot size={18} className="text-orange-500" />
+                  Semantic Intent Analysis
                 </h4>
                 <p className="text-sm text-white/40 leading-relaxed">
-                  When Gemini detects a "Semantic Ambiguity" (where intent is unclear), it pauses the merge and triggers a **Firebase Cloud Function** to email the PR author and the Team Lead with a direct link to the manual resolution UI.
+                  Gemini 3.1 Pro doesn't just look at lines; it understands the *intent* of the code. It can detect if two changes are logically incompatible even if they don't touch the same lines, preventing "silent" semantic bugs.
                 </p>
               </div>
             </div>
