@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Zap, Cpu, GitMerge, CheckCircle2, AlertCircle, Info, Layers, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Zap, Cpu, GitMerge, CheckCircle2, AlertCircle, Info, Layers, ExternalLink, FileText } from 'lucide-react';
+import { DesignDoc } from './DesignDoc';
 
 export const JudgeView: React.FC = () => {
+  const [isDesignDocOpen, setIsDesignDocOpen] = useState(false);
   const requirements = [
     {
       title: "Beyond 'AI Writes Code'",
@@ -69,8 +71,8 @@ export const JudgeView: React.FC = () => {
         <p className="text-white/60 text-sm leading-relaxed">
           The system architecture is designed for high availability and real-time synchronization. It leverages a React-based frontend, a Firebase backend for state management, and a Gemini-powered AI orchestrator that interacts directly with the GitLab API.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
             <p className="text-xs font-bold text-orange-500 uppercase tracking-widest">Architecture Diagram</p>
             <p className="text-sm text-white/80">View the full SVG and Mermaid diagrams in the Live Demo section.</p>
             <button 
@@ -80,9 +82,9 @@ export const JudgeView: React.FC = () => {
               View Diagram <ExternalLink size={14} />
             </button>
           </div>
-          <div className="flex-1 p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
             <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Live Presentation</p>
-            <p className="text-sm text-white/80">Watch the 3-minute AI-guided tour of the system architecture.</p>
+            <p className="text-sm text-white/80">Watch the 4-minute AI-guided tour of the system architecture.</p>
             <button 
               onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: 'demo' }))}
               className="mt-4 flex items-center gap-2 text-sm font-bold text-white hover:text-emerald-500 transition-colors"
@@ -90,8 +92,20 @@ export const JudgeView: React.FC = () => {
               Start Demo <ExternalLink size={14} />
             </button>
           </div>
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+            <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Design Document</p>
+            <p className="text-sm text-white/80">Deep dive into the technical specifications and merge workflows.</p>
+            <button 
+              onClick={() => setIsDesignDocOpen(true)}
+              className="mt-4 flex items-center gap-2 text-sm font-bold text-white hover:text-blue-500 transition-colors"
+            >
+              Read Doc <FileText size={14} />
+            </button>
+          </div>
         </div>
       </section>
+
+      <DesignDoc isOpen={isDesignDocOpen} onClose={() => setIsDesignDocOpen(false)} />
 
       <section>
         <h3 className="text-xl font-bold text-white mb-8">Requirement Checklist</h3>

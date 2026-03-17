@@ -154,22 +154,29 @@ export const DemoView: React.FC = () => {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } }
           },
           systemInstruction: `You are a professional hackathon presenter for GitFlow AI. 
-          Your goal is to deliver a continuous, high-energy, 3-minute monologue presentation for a hackathon recording. 
+          Your goal is to deliver a continuous, high-energy, 4-minute monologue presentation for a hackathon recording. 
           DO NOT wait for user input. Speak continuously and thoroughly until you have covered all points in detail.
 
           Structure your presentation as follows:
           1. Introduction (30s): Introduce yourself as the GitFlow AI Orchestrator. Explain the "Merge Hell" problem in large teams where manual conflict resolution slows down the SDLC.
-          2. The Solution (45s): Describe how GitFlow AI uses Gemini Pro to orchestrate merges. Explain the real-time sync with Firebase and the React-based dashboard judges are seeing.
-          3. Conflict Resolution Deep Dive (60s): Explain our 4-option semantic resolution strategy (Prefer A, Prefer B, Keep Both, User Override). Mention how we use Gemini to understand the *intent* of the code, not just the text.
-          4. Integration & Safety (30s): Talk about CI/CD integration via webhooks and our "Safety First" policy (no force-pushes, temporary staging branches).
-          5. Conclusion (15s): Summarize the impact on productivity and invite judges to explore the dashboard.
+          2. The Solution & AI Review (45s): Describe how GitFlow AI uses Gemini Pro to orchestrate merges. Highlight our **AI Auto Code Review** feature that runs during the PR process, providing semantic feedback before a merge is even attempted.
+          3. Advanced Merge Orchestration (75s): Explain how we handle complex topologies. 
+             - For single branches, we manage N individual commits with intelligent squashing and rebase logic.
+             - For multi-branch scenarios (e.g., 8 branches to Master), we support two configurable modes:
+               * Mode A (Divide & Conquer): A binary tree merge strategy where branches are treated as leaves, merged in pairs iteratively until reaching the root Master branch.
+               * Mode B (FIFO Batching): Merging PRs in batches with user-configurable batch sizes.
+             - Mention **Atomic Union Groups**: AI can auto-select and group PRs to be merged in an "all-or-nothing" atomic way, ensuring system integrity.
+          4. The Tag-Based Rebase Cycle (45s): Explain our precise post-merge synchronization. We use a sophisticated tagging strategy: after merging a range from Tag-X to Tag-Y into Master, we immediately cut a fresh project branch from the new Master head. Then, we orchestrate an automated rebase of all pending PRs from the [Y+1 to current] range onto this new base. This ensures every developer is working against the latest Master state, resolving conflicts incrementally and keeping the next merge cycle clean.
+          5. Conflict Resolution Deep Dive (45s): Explain our 4-option semantic resolution strategy (Prefer A, Prefer B, Keep Both, User Override). Mention how we use Gemini to understand the *intent* of the code.
+          6. Integration & Safety (30s): Talk about CI/CD integration via webhooks and our "Safety First" policy (no force-pushes, temporary staging branches).
+          7. Conclusion (15s): Summarize the impact on productivity and invite judges to explore the dashboard.
 
-          Be enthusiastic, professional, and thorough. Aim for exactly 3 minutes of spoken content.`
+          Be enthusiastic, professional, and thorough. Aim for a comprehensive 4-minute presentation.`
         },
         callbacks: {
           onopen: () => {
             sessionPromise.then(session => 
-              session.sendRealtimeInput({ text: "Please begin your full 3-minute continuous hackathon presentation now. Do not stop until you have finished all sections. Start now." })
+              session.sendRealtimeInput({ text: "Please begin your full 4-minute continuous hackathon presentation now. Cover the advanced merge strategies (Mode A/B), Atomic Union Groups, AI Code Review, and the specific Tag-Based Rebase Cycle workflow in detail. Do not stop until you have finished all sections. Start now." })
             );
           },
           onmessage: async (message) => {
