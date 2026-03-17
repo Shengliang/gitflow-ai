@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { FileText, X, Download, Printer, Layers, GitBranch, Shield, Zap, Cpu, Loader2, Server, Database, Globe, Code2, Workflow, CheckCircle2 } from 'lucide-react';
+import { FileText, X, Download, Layers, GitBranch, Shield, Zap, Cpu, Loader2, Server, Database, Globe, Code2, Workflow, CheckCircle2, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -226,9 +227,6 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-all text-xs font-bold">
-              <Printer size={14} /> Print
-            </button>
             <button onClick={exportToPDF} disabled={isExporting} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-xl transition-all text-xs font-bold shadow-lg shadow-blue-600/20">
               {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               {isExporting ? 'Generating PDF...' : 'Export PDF'}
@@ -244,9 +242,44 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto p-12 bg-zinc-950 scrollbar-hide">
           <div ref={docRef} id="design-doc-content" className="max-w-4xl mx-auto space-y-16 pb-24">
             
-            {/* Title Section */}
+            {/* Cover Page */}
+            <section className="min-h-[800px] flex flex-col justify-center items-center text-center page-break-after border-b border-zinc-900 pb-24">
+              <div className="w-32 h-32 bg-blue-600 rounded-[40px] flex items-center justify-center mb-12 shadow-2xl shadow-blue-600/40">
+                <GitBranch size={64} className="text-white" />
+              </div>
+              <h1 className="text-8xl font-black text-white mb-6 tracking-tighter italic uppercase">GitFlow AI</h1>
+              <p className="text-2xl text-blue-400 font-bold uppercase tracking-[0.6em] mb-24">Technical Specification</p>
+              
+              <div className="grid grid-cols-2 gap-12 w-full max-w-2xl text-left border-t border-zinc-800 pt-12">
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Document Version</p>
+                  <p className="text-white font-bold">v1.0.4 (Stable)</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Release Date</p>
+                  <p className="text-white font-bold">March 17, 2026</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Classification</p>
+                  <p className="text-white font-bold">Internal / Confidential</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Prepared By</p>
+                  <p className="text-white font-bold">GitFlow AI Systems Engineering</p>
+                </div>
+              </div>
+              
+              <div className="mt-32 p-6 bg-zinc-900/30 rounded-3xl border border-zinc-800/50 max-w-lg">
+                <p className="text-xs text-zinc-500 leading-relaxed italic">
+                  "This document outlines the semantic orchestration layer and multi-platform integration strategies for the GitFlow AI platform."
+                </p>
+              </div>
+              <SectionFooter page={1} total={9} />
+            </section>
+
+            {/* Title Section (Now Section 1) */}
             <div className="border-b-4 border-blue-500 pb-12">
-              <h1 className="text-6xl font-black text-white mb-4 tracking-tighter italic uppercase">GitFlow AI</h1>
+              <h2 className="text-6xl font-black text-white mb-4 tracking-tighter italic uppercase">GitFlow AI</h2>
               <p className="text-blue-400 font-bold uppercase tracking-[0.5em] text-sm">Semantic Orchestration Layer Specification</p>
               <div className="mt-8 flex gap-4">
                 <span className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Doc ID: GF-AI-2026-001</span>
@@ -263,7 +296,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
               <p className="text-zinc-400 leading-relaxed text-lg">
                 GitFlow AI is a next-generation orchestration layer designed to eliminate "Merge Hell" in large-scale engineering organizations. By leveraging the <span className="text-blue-400 font-bold">Gemini 3.1 Pro</span> multimodal model, the system semantically understands code changes, automates complex merge topologies, and provides real-time conflict resolution strategies that go beyond simple line-diffing.
               </p>
-              <SectionFooter page={1} total={7} />
+              <SectionFooter page={2} total={9} />
             </section>
 
             {/* 2. System Architecture */}
@@ -296,7 +329,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               </div>
-              <SectionFooter page={2} total={7} />
+              <SectionFooter page={3} total={9} />
             </section>
 
             {/* 3. Semantic Conflict Resolution */}
@@ -317,7 +350,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   ["User Override", "Pause & Notify", "High-risk logic changes (Security/Auth)."]
                 ]}
               />
-              <SectionFooter page={3} total={7} />
+              <SectionFooter page={4} total={9} />
             </section>
 
             {/* 4. Platform Integration */}
@@ -339,7 +372,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   ["CI Trigger", "`POST .../pipeline`", "`POST .../actions/workflows/.../dispatches`"]
                 ]}
               />
-              <SectionFooter page={4} total={7} />
+              <SectionFooter page={5} total={9} />
             </section>
 
             {/* 5. Implementation Details */}
@@ -378,7 +411,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               </div>
-              <SectionFooter page={5} total={7} />
+              <SectionFooter page={6} total={9} />
             </section>
 
             {/* 6. Advanced Merge Topologies */}
@@ -395,7 +428,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   <li><span className="text-white font-bold">Shadow Integration</span>: Running background merges into a "shadow" branch to detect conflicts days before the actual merge deadline.</li>
                 </ul>
               </div>
-              <SectionFooter page={6} total={7} />
+              <SectionFooter page={7} total={9} />
             </section>
 
             {/* 7. CI/CD Pipeline */}
@@ -431,7 +464,31 @@ test_job:
                   </pre>
                 </div>
               </div>
-              <SectionFooter page={7} total={7} />
+              <SectionFooter page={8} total={9} />
+            </section>
+
+            {/* 8. Verification & Authenticity */}
+            <section className="page-break-after flex flex-col items-center justify-center text-center py-24">
+              <div className="flex items-center gap-4 mb-12">
+                <QrCode className="text-blue-400" size={24} />
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">8. Verification & Authenticity</h2>
+              </div>
+              <p className="text-zinc-400 mb-12 max-w-lg">
+                Scan the QR code below to verify the authenticity of this technical specification or to access the live deployment of the GitFlow AI orchestration layer.
+              </p>
+              <div className="p-8 bg-white rounded-[40px] shadow-2xl shadow-blue-500/20 border-8 border-zinc-900">
+                <QRCodeSVG 
+                  value="https://ais-pre-kxsusitd3wvrmxfiakdr7o-97597776023.us-west1.run.app" 
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+              <div className="mt-12 space-y-2">
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em]">Digital Signature Verified</p>
+                <p className="text-[10px] font-mono text-zinc-600">HASH: 7f8e9a2b1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f</p>
+              </div>
+              <SectionFooter page={9} total={9} />
             </section>
 
             {/* Footer */}

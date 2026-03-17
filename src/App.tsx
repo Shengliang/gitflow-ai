@@ -287,11 +287,11 @@ export default function App() {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full bg-[#1C1D21] border border-white/5 rounded-[32px] p-12 text-center"
         >
-          <div className="w-20 h-20 bg-orange-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-orange-500/20">
+          <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-orange-500/20 ring-1 ring-white/20">
             <GitBranch className="text-white" size={40} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4 tracking-tight">GitFlow AI</h1>
-          <p className="text-white/40 mb-12 leading-relaxed">
+          <h1 className="text-4xl font-black text-white mb-4 tracking-tighter italic uppercase">GitFlow AI</h1>
+          <p className="text-white/40 mb-12 leading-relaxed font-medium">
             The intelligent orchestrator for your GitLab and GitHub workflows. Automate merges, resolve conflicts, and scale your productivity.
           </p>
           <div className="space-y-4">
@@ -384,6 +384,21 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
+              {/* Banner */}
+              <div className="relative h-48 rounded-[32px] overflow-hidden border border-white/5 shadow-2xl">
+                <img 
+                  src="https://picsum.photos/seed/gitflow-tech/1200/400" 
+                  alt="GitFlow AI Banner" 
+                  className="w-full h-full object-cover opacity-50"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0A0B0D] via-transparent to-transparent"></div>
+                <div className="absolute inset-0 flex flex-col justify-center px-12">
+                  <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase mb-2">System Overview</h2>
+                  <p className="text-orange-500 font-bold uppercase tracking-[0.4em] text-[10px]">Real-time Semantic Orchestration</p>
+                </div>
+              </div>
+
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[

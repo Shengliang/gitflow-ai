@@ -23,10 +23,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
     <div className="w-64 bg-[#151619] border-r border-white/10 flex flex-col h-screen sticky top-0">
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-indigo-600 rounded-lg flex items-center justify-center ring-1 ring-white/20">
             <GitBranch className="text-white w-5 h-5" />
           </div>
-          <h1 className="text-white font-bold tracking-tight">GitFlow AI</h1>
+          <h1 className="text-white font-black tracking-tighter italic uppercase">GitFlow AI</h1>
         </div>
       </div>
       
