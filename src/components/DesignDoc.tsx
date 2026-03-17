@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { FileText, X, Download, Printer, Layers, GitBranch, Shield, Zap, Cpu, Loader2, Server, Database, Globe, Code2, Workflow } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { FileText, X, Download, Printer, Layers, GitBranch, Shield, Zap, Cpu, Loader2, Server, Database, Globe, Code2, Workflow, CheckCircle2 } from 'lucide-react';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface DesignDocProps {
   isOpen: boolean;
@@ -98,30 +98,114 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
 
   const exportToPDF = async () => {
     if (!docRef.current || isExporting) return;
+    
     setIsExporting(true);
+    
+    const element = docRef.current;
+    const opt = {
+      margin: 10,
+      filename: 'GitFlow-AI-Technical-Specification.pdf',
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc: Document) => {
+          // 1. Force white background on the body and main container
+          const content = clonedDoc.getElementById('design-doc-content');
+          if (content) {
+            content.style.backgroundColor = '#ffffff';
+            content.style.color = '#000000';
+            // Ensure the parent container is also white
+            if (content.parentElement) {
+              content.parentElement.style.backgroundColor = '#ffffff';
+            }
+          }
+
+          // 2. Aggressively strip oklab/oklch from all style tags
+          const styleTags = clonedDoc.getElementsByTagName('style');
+          for (let i = 0; i < styleTags.length; i++) {
+            styleTags[i].innerHTML = styleTags[i].innerHTML
+              .replace(/oklch\([^)]+\)/g, '#000000')
+              .replace(/oklab\([^)]+\)/g, '#000000');
+          }
+
+          // 3. Scan all elements for theme conversion and style fixes
+          const elements = clonedDoc.getElementsByTagName('*');
+          for (let i = 0; i < elements.length; i++) {
+            const el = elements[i] as HTMLElement;
+            
+            // Force light theme classes or styles
+            const className = el.className || '';
+            if (typeof className === 'string') {
+              // Backgrounds
+              if (className.includes('bg-zinc-950')) el.style.backgroundColor = '#ffffff';
+              if (className.includes('bg-zinc-900')) el.style.backgroundColor = '#f8f8f8';
+              if (className.includes('bg-black')) el.style.backgroundColor = '#f8f8f8';
+              if (className.includes('bg-zinc-800')) el.style.backgroundColor = '#e5e5e5';
+              
+              // Text
+              if (className.includes('text-white')) el.style.color = '#000000';
+              if (className.includes('text-zinc-100')) el.style.color = '#111111';
+              if (className.includes('text-zinc-300')) el.style.color = '#333333';
+              if (className.includes('text-zinc-400')) el.style.color = '#555555';
+              if (className.includes('text-zinc-500')) el.style.color = '#666666';
+              
+              // Borders
+              if (className.includes('border-zinc-800')) el.style.borderColor = '#dddddd';
+              if (className.includes('border-zinc-900')) el.style.borderColor = '#eeeeee';
+            }
+
+            // Fix inline styles
+            const inlineStyle = el.getAttribute('style');
+            if (inlineStyle && (inlineStyle.includes('oklch') || inlineStyle.includes('oklab'))) {
+              el.setAttribute('style', inlineStyle
+                .replace(/oklch\([^)]+\)/g, '#000000')
+                .replace(/oklab\([^)]+\)/g, '#000000'));
+            }
+
+            // Fix computed styles that might still be active or need inversion
+            const style = window.getComputedStyle(el);
+            const properties = ['color', 'backgroundColor', 'borderColor', 'outlineColor', 'textDecorationColor', 'fill', 'stroke'];
+            properties.forEach(prop => {
+              const value = (el.style as any)[prop] || style.getPropertyValue(prop);
+              
+              // Handle oklch/oklab
+              if (value && (value.includes('oklch') || value.includes('oklab'))) {
+                let fallback = '#000000';
+                if (prop.toLowerCase().includes('background')) fallback = '#ffffff';
+                if (prop.toLowerCase().includes('border')) fallback = '#dddddd';
+                (el.style as any)[prop] = fallback;
+              }
+              
+              // Force light theme for SVGs specifically
+              if (el.tagName.toLowerCase() === 'text' && prop === 'fill' && (value === 'rgb(255, 255, 255)' || value === '#ffffff' || value === 'white' || value.includes('255, 255, 255'))) {
+                el.setAttribute('fill', '#000000');
+              }
+              if (el.tagName.toLowerCase() === 'rect' && prop === 'fill' && (value.includes('23, 23, 23') || value.includes('12, 10, 9') || value.includes('28, 25, 23'))) {
+                el.setAttribute('fill', '#f0f0f0');
+              }
+            });
+          }
+        }
+      },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+      pagebreak: { mode: ['avoid-all' as const, 'css' as const, 'legacy' as const] }
+    };
+
     try {
-      const element = docRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#09090b',
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('GitFlow-AI-Technical-Spec.pdf');
+      await html2pdf().set(opt).from(element).save();
     } catch (err) {
       console.error('Failed to export PDF:', err);
+      alert('PDF generation failed. Please try using the Print button.');
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md print:hidden">
       <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/50">
@@ -140,7 +224,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </button>
             <button onClick={exportToPDF} disabled={isExporting} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-xl transition-all text-xs font-bold shadow-lg shadow-blue-600/20">
               {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              {isExporting ? 'Generating...' : 'Export PDF'}
+              {isExporting ? 'Generating PDF...' : 'Export PDF'}
             </button>
             <div className="w-px h-6 bg-zinc-800 mx-2" />
             <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-500 hover:text-zinc-100">
@@ -150,8 +234,8 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-12 bg-zinc-950">
-          <div ref={docRef} className="max-w-4xl mx-auto space-y-16 pb-24">
+        <div className="flex-1 overflow-y-auto p-12 bg-zinc-950 scrollbar-hide">
+          <div ref={docRef} id="design-doc-content" className="max-w-4xl mx-auto space-y-16 pb-24">
             
             {/* Title Section */}
             <div className="border-b-4 border-blue-500 pb-12">
@@ -164,7 +248,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </div>
 
             {/* 1. Executive Summary */}
-            <section>
+            <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Layers className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">1. Executive Summary</h2>
@@ -175,7 +259,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </section>
 
             {/* 2. System Architecture */}
-            <section>
+            <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Server className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">2. System Architecture</h2>
@@ -207,7 +291,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </section>
 
             {/* 3. Semantic Conflict Resolution */}
-            <section>
+            <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Shield className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">3. Conflict Resolution Strategies</h2>
@@ -227,7 +311,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </section>
 
             {/* 4. Platform Integration */}
-            <section>
+            <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Globe className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">4. Platform Integration</h2>
@@ -248,7 +332,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </section>
 
             {/* 5. Implementation Details */}
-            <section className="space-y-8">
+            <section className="space-y-8 page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Code2 className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">5. Implementation Details</h2>
@@ -286,7 +370,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </section>
 
             {/* 6. Advanced Merge Topologies */}
-            <section>
+            <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <GitBranch className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">6. Advanced Merge Topologies</h2>
@@ -302,7 +386,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             </section>
 
             {/* 7. CI/CD Pipeline */}
-            <section>
+            <section className="page-break-after">
               <div className="flex items-center gap-4 mb-6">
                 <Workflow className="text-blue-400" size={24} />
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">7. CI/CD Pipeline Integration</h2>

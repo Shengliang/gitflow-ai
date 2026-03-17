@@ -166,6 +166,7 @@ export const DemoView: React.FC = () => {
         model: "gemini-2.5-flash-native-audio-preview-09-2025",
         config: {
           responseModalities: [Modality.AUDIO],
+          outputAudioTranscription: {},
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } }
           },
@@ -196,39 +197,50 @@ export const DemoView: React.FC = () => {
             );
           },
           onmessage: async (message) => {
-            if (message.serverContent?.modelTurn?.parts[0]?.inlineData?.data) {
-              const base64Audio = message.serverContent.modelTurn.parts[0].inlineData.data;
-              const binaryString = atob(base64Audio);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-              const pcmData = new Int16Array(bytes.buffer);
-              const float32Data = new Float32Array(pcmData.length);
-              for (let i = 0; i < pcmData.length; i++) {
-                float32Data[i] = pcmData[i] / 32768.0;
-              }
+            if (message.serverContent?.modelTurn?.parts) {
+              for (const part of message.serverContent.modelTurn.parts) {
+                if (part.inlineData?.data) {
+                  const base64Audio = part.inlineData.data;
+                  const binaryString = atob(base64Audio);
+                  const bytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                  }
+                  const pcmData = new Int16Array(bytes.buffer);
+                  const float32Data = new Float32Array(pcmData.length);
+                  for (let i = 0; i < pcmData.length; i++) {
+                    float32Data[i] = pcmData[i] / 32768.0;
+                  }
 
-              const audioBuffer = audioContextRef.current!.createBuffer(1, float32Data.length, 24000);
-              audioBuffer.getChannelData(0).set(float32Data);
+                  if (audioContextRef.current) {
+                    const audioBuffer = audioContextRef.current.createBuffer(1, float32Data.length, 24000);
+                    audioBuffer.getChannelData(0).set(float32Data);
 
-              const source = audioContextRef.current!.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(audioContextRef.current!.destination);
-              
-              const currentTime = audioContextRef.current!.currentTime;
-              if (nextStartTimeRef.current < currentTime) {
-                nextStartTimeRef.current = currentTime;
+                    const source = audioContextRef.current.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioContextRef.current.destination);
+                    
+                    const currentTime = audioContextRef.current.currentTime;
+                    if (nextStartTimeRef.current < currentTime) {
+                      nextStartTimeRef.current = currentTime;
+                    }
+                    source.start(nextStartTimeRef.current);
+                    nextStartTimeRef.current += audioBuffer.duration;
+                  }
+                }
+                
+                if (part.text) {
+                  const text = part.text;
+                  setTranscript(prev => [...prev, text]);
+                  // Also add to chat messages for context
+                  setMessages(prev => [...prev, { role: 'bot', content: text }]);
+                }
               }
-              source.start(nextStartTimeRef.current);
-              nextStartTimeRef.current += audioBuffer.duration;
             }
             
-            if (message.serverContent?.modelTurn?.parts[0]?.text) {
-              const text = message.serverContent.modelTurn.parts[0].text;
-              setTranscript(prev => [...prev, text]);
-              // Also add to chat messages for context
-              setMessages(prev => [...prev, { role: 'bot', content: text }]);
+            if (message.serverContent?.interrupted) {
+              // Handle interruption if needed
+              nextStartTimeRef.current = audioContextRef.current?.currentTime || 0;
             }
           },
           onclose: () => setIsPresenting(false),
@@ -250,6 +262,11 @@ export const DemoView: React.FC = () => {
   const stopPresentation = () => {
     if (liveSessionRef.current) {
       liveSessionRef.current.close();
+      liveSessionRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(console.error);
+      audioContextRef.current = null;
     }
     setIsPresenting(false);
   };

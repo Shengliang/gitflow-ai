@@ -10,14 +10,17 @@ import { MergeQueue } from './components/MergeQueue';
 import { BranchGraph } from './components/BranchGraph';
 import { JudgeView } from './components/JudgeView';
 import { DemoView } from './components/DemoView';
+import { RepoView } from './components/RepoView';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
-import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2 } from 'lucide-react';
+import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
-  GoogleAuthProvider, 
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  OAuthProvider,
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -136,12 +139,25 @@ export default function App() {
     return () => window.removeEventListener('changeTab', handleTabChange);
   }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = async (providerType: 'google' | 'github' | 'gitlab' = 'google') => {
     try {
-      const provider = new GoogleAuthProvider();
+      let provider;
+      if (providerType === 'google') {
+        provider = new GoogleAuthProvider();
+      } else if (providerType === 'github') {
+        provider = new GithubAuthProvider();
+      } else {
+        // GitLab is typically configured as an OIDC provider in Firebase
+        provider = new OAuthProvider('oidc.gitlab');
+      }
       await signInWithPopup(auth, provider);
     } catch (err) {
       console.error('Login failed', err);
+      if (err instanceof Error && err.message.includes('auth/operation-not-allowed')) {
+        alert(`The ${providerType} login provider is not enabled in the Firebase Console. Please enable it to use this feature.`);
+      } else {
+        alert(`Login failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
     }
   };
 
@@ -276,15 +292,33 @@ export default function App() {
           </div>
           <h1 className="text-3xl font-bold text-white mb-4 tracking-tight">GitFlow AI</h1>
           <p className="text-white/40 mb-12 leading-relaxed">
-            The intelligent orchestrator for your GitLab workflow. Automate merges, resolve conflicts, and scale your productivity.
+            The intelligent orchestrator for your GitLab and GitHub workflows. Automate merges, resolve conflicts, and scale your productivity.
           </p>
-          <button
-            onClick={handleLogin}
-            className="w-full bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-orange-500 hover:text-white transition-all group"
-          >
-            <LogIn size={20} />
-            Sign in with Google
-          </button>
+          <div className="space-y-4">
+            <button
+              onClick={() => handleLogin('google')}
+              className="w-full bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-orange-500 hover:text-white transition-all group"
+            >
+              <LogIn size={20} />
+              Sign in with Google
+            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => handleLogin('github')}
+                className="bg-[#24292e] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-[#2b3137] transition-all"
+              >
+                <Github size={20} />
+                GitHub
+              </button>
+              <button
+                onClick={() => handleLogin('gitlab')}
+                className="bg-[#e24329] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-[#fc6d26] transition-all"
+              >
+                <Globe size={20} />
+                GitLab
+              </button>
+            </div>
+          </div>
           <p className="mt-8 text-[10px] text-white/20 uppercase tracking-widest font-bold">
             GitLab Hackathon 2026
           </p>
@@ -723,6 +757,7 @@ export default function App() {
 
           {activeTab === 'judge' && <JudgeView />}
           {activeTab === 'demo' && <DemoView />}
+          {activeTab === 'repositories' && <RepoView />}
         </AnimatePresence>
 
         {error && <ErrorDisplay error={error} />}
