@@ -71,7 +71,47 @@ GitFlow AI acts as a bridge for hybrid environments. It can orchestrate merges b
 4. **Validation**: Running CI on Provider B to ensure compatibility.
 5. **Final Merge**: Executing the merge on Provider B once verified.
 
-## 6. Security & Safety
+## 6. CI/CD Pipeline Implementation
+
+GitFlow AI leverages the native CI/CD capabilities of both platforms to ensure every merge is verified.
+
+### 6.1 GitHub Workflows
+To use GitHub Workflows with GitFlow AI:
+1. **Definition**: Create YAML files in `.github/workflows/`.
+2. **Structure**:
+   ```yaml
+   name: CI
+   on: [push, pull_request, workflow_dispatch]
+   jobs:
+     build:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - name: Run Tests
+           run: npm test
+   ```
+3. **Orchestration**: GitFlow AI triggers these via `workflow_dispatch` for staging branches and monitors `check_suite` events for results.
+
+### 6.2 GitLab Pipelines
+To use GitLab CI/CD with GitFlow AI:
+1. **Definition**: Create a `.gitlab-ci.yml` file in the root directory.
+2. **Structure**:
+   ```yaml
+   stages:
+     - test
+   test_job:
+     stage: test
+     image: node:latest
+     script:
+       - npm install
+       - npm test
+   ```
+3. **Orchestration**: GitFlow AI triggers pipelines via the API and polls the Pipeline status or listens for Pipeline Webhook events.
+
+### 6.3 Automated Translation
+When performing cross-platform merges, the AI Engine automatically translates between these two formats to maintain pipeline integrity in the target environment.
+
+## 7. Security & Safety
 - **Staging Branches**: All merges are tested in temporary staging branches before hitting Master.
 - **No Force-Pushes**: The system uses clean rebase/merge cycles to maintain a linear, readable history.
 - **Audit Logs**: Every AI decision is logged in Firestore for human review.
