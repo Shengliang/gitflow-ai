@@ -90,6 +90,13 @@ const DataTable = ({ headers, rows }: { headers: string[], rows: string[][] }) =
   </div>
 );
 
+const SectionFooter = ({ page, total }: { page: number, total: number }) => (
+  <div className="mt-12 pt-8 border-t border-zinc-900/50 flex justify-between items-center text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+    <p>© 2026 GitFlow AI Systems • Technical Specification</p>
+    <p>Page {page} of {total}</p>
+  </div>
+);
+
 export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
   const docRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -123,12 +130,13 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
             }
           }
 
-          // 2. Aggressively strip oklab/oklch from all style tags
+          // 2. Aggressively strip oklab/oklch from all style tags and computed styles
           const styleTags = clonedDoc.getElementsByTagName('style');
           for (let i = 0; i < styleTags.length; i++) {
             styleTags[i].innerHTML = styleTags[i].innerHTML
               .replace(/oklch\([^)]+\)/g, '#000000')
-              .replace(/oklab\([^)]+\)/g, '#000000');
+              .replace(/oklab\([^)]+\)/g, '#000000')
+              .replace(/color-mix\([^)]+\)/g, '#888888'); // Also strip color-mix which can be problematic
           }
 
           // 3. Scan all elements for theme conversion and style fixes
@@ -157,36 +165,35 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
               if (className.includes('border-zinc-900')) el.style.borderColor = '#eeeeee';
             }
 
-            // Fix inline styles
+            // Fix inline styles and attributes
             const inlineStyle = el.getAttribute('style');
-            if (inlineStyle && (inlineStyle.includes('oklch') || inlineStyle.includes('oklab'))) {
+            if (inlineStyle && (inlineStyle.includes('oklch') || inlineStyle.includes('oklab') || inlineStyle.includes('color-mix'))) {
               el.setAttribute('style', inlineStyle
                 .replace(/oklch\([^)]+\)/g, '#000000')
-                .replace(/oklab\([^)]+\)/g, '#000000'));
+                .replace(/oklab\([^)]+\)/g, '#000000')
+                .replace(/color-mix\([^)]+\)/g, '#888888'));
             }
 
             // Fix computed styles that might still be active or need inversion
-            const style = window.getComputedStyle(el);
+            // We use a more direct approach here to avoid expensive getComputedStyle if possible
             const properties = ['color', 'backgroundColor', 'borderColor', 'outlineColor', 'textDecorationColor', 'fill', 'stroke'];
             properties.forEach(prop => {
-              const value = (el.style as any)[prop] || style.getPropertyValue(prop);
+              const value = (el.style as any)[prop];
               
-              // Handle oklch/oklab
-              if (value && (value.includes('oklch') || value.includes('oklab'))) {
+              // Handle oklch/oklab/color-mix in inline styles
+              if (value && (value.includes('oklch') || value.includes('oklab') || value.includes('color-mix'))) {
                 let fallback = '#000000';
                 if (prop.toLowerCase().includes('background')) fallback = '#ffffff';
                 if (prop.toLowerCase().includes('border')) fallback = '#dddddd';
                 (el.style as any)[prop] = fallback;
               }
-              
-              // Force light theme for SVGs specifically
-              if (el.tagName.toLowerCase() === 'text' && prop === 'fill' && (value === 'rgb(255, 255, 255)' || value === '#ffffff' || value === 'white' || value.includes('255, 255, 255'))) {
-                el.setAttribute('fill', '#000000');
-              }
-              if (el.tagName.toLowerCase() === 'rect' && prop === 'fill' && (value.includes('23, 23, 23') || value.includes('12, 10, 9') || value.includes('28, 25, 23'))) {
-                el.setAttribute('fill', '#f0f0f0');
-              }
             });
+            
+            // Special handling for SVGs
+            if (el.tagName.toLowerCase() === 'svg') {
+              el.setAttribute('fill', el.getAttribute('fill')?.replace(/oklch\([^)]+\)/g, '#000000').replace(/oklab\([^)]+\)/g, '#000000') || '');
+              el.setAttribute('stroke', el.getAttribute('stroke')?.replace(/oklch\([^)]+\)/g, '#000000').replace(/oklab\([^)]+\)/g, '#000000') || '');
+            }
           }
         }
       },
@@ -256,6 +263,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
               <p className="text-zinc-400 leading-relaxed text-lg">
                 GitFlow AI is a next-generation orchestration layer designed to eliminate "Merge Hell" in large-scale engineering organizations. By leveraging the <span className="text-blue-400 font-bold">Gemini 3.1 Pro</span> multimodal model, the system semantically understands code changes, automates complex merge topologies, and provides real-time conflict resolution strategies that go beyond simple line-diffing.
               </p>
+              <SectionFooter page={1} total={7} />
             </section>
 
             {/* 2. System Architecture */}
@@ -288,6 +296,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               </div>
+              <SectionFooter page={2} total={7} />
             </section>
 
             {/* 3. Semantic Conflict Resolution */}
@@ -308,6 +317,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   ["User Override", "Pause & Notify", "High-risk logic changes (Security/Auth)."]
                 ]}
               />
+              <SectionFooter page={3} total={7} />
             </section>
 
             {/* 4. Platform Integration */}
@@ -329,6 +339,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   ["CI Trigger", "`POST .../pipeline`", "`POST .../actions/workflows/.../dispatches`"]
                 ]}
               />
+              <SectionFooter page={4} total={7} />
             </section>
 
             {/* 5. Implementation Details */}
@@ -367,6 +378,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               </div>
+              <SectionFooter page={5} total={7} />
             </section>
 
             {/* 6. Advanced Merge Topologies */}
@@ -383,6 +395,7 @@ export const DesignDoc: React.FC<DesignDocProps> = ({ isOpen, onClose }) => {
                   <li><span className="text-white font-bold">Shadow Integration</span>: Running background merges into a "shadow" branch to detect conflicts days before the actual merge deadline.</li>
                 </ul>
               </div>
+              <SectionFooter page={6} total={7} />
             </section>
 
             {/* 7. CI/CD Pipeline */}
@@ -418,12 +431,12 @@ test_job:
                   </pre>
                 </div>
               </div>
+              <SectionFooter page={7} total={7} />
             </section>
 
             {/* Footer */}
             <div className="pt-12 border-t border-zinc-900 flex justify-between items-center text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
               <p>© 2026 GitFlow AI Systems • All Rights Reserved</p>
-              <p>Page 1 of 1</p>
             </div>
 
           </div>
