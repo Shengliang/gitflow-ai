@@ -1,0 +1,5 @@
+{
+  "name": "GitFlow AI: Auto-Merge Orchestrator",
+  "description": "An AI-powered workflow queue for GitLab that automates PR merges, conflict resolution, and bi-weekly release cycles using Gemini.",
+  "requestFramePermissions": []
+}

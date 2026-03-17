@@ -1,0 +1,167 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: branches
+    // Fields:
+    //   - name: string (required)
+    //   - type: string (required, ['master', 'project', 'release'])
+    //   - teamId: string (optional)
+    //   - lastMergedAt: number (optional)
+    //
+    // Collection: pullRequests
+    // Fields:
+    //   - title: string (required, size < 200)
+    //   - author: string (required)
+    //   - authorUid: string (required, immutable)
+    //   - sourceBranch: string (required)
+    //   - targetBranch: string (required)
+    //   - status: string (required, ['open', 'merging', 'merged', 'conflict', 'failed_tests'])
+    //   - createdAt: number (required, immutable)
+    //   - conflictDetails: string (optional, size < 5000)
+    //   - testResults: string (optional, size < 5000)
+    //
+    // Collection: mergeJobs
+    // Fields:
+    //   - prId: string (required)
+    //   - status: string (required, ['queued', 'resolving_conflicts', 'running_tests', 'completed', 'failed'])
+    //   - progress: number (required, 0-100)
+    //   - logs: list (required, size < 100)
+    //   - aiResolution: string (optional)
+    //
+    // Collection: teams
+    // Fields:
+    //   - name: string (required)
+    //   - engineers: list (required, size < 50)
+    //
+    // Collection: users
+    // Fields:
+    //   - displayName: string (required)
+    //   - email: string (required, email format)
+    //   - role: string (required, ['admin', 'engineer'])
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "shengliang.song@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidBranch(data) {
+      return hasRequiredFields(['name', 'type']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type in ['master', 'project', 'release'] &&
+             (!('teamId' in data) || data.teamId is string) &&
+             (!('lastMergedAt' in data) || data.lastMergedAt is number);
+    }
+
+    function isValidPullRequest(data) {
+      return hasRequiredFields(['title', 'author', 'authorUid', 'sourceBranch', 'targetBranch', 'status', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.author is string &&
+             data.authorUid is string &&
+             data.sourceBranch is string &&
+             data.targetBranch is string &&
+             data.status in ['open', 'merging', 'merged', 'conflict', 'failed_tests'] &&
+             data.createdAt is number &&
+             (!('conflictDetails' in data) || (data.conflictDetails is string && data.conflictDetails.size() < 5000)) &&
+             (!('testResults' in data) || (data.testResults is string && data.testResults.size() < 5000));
+    }
+
+    function isValidMergeJob(data) {
+      return hasRequiredFields(['prId', 'status', 'progress', 'logs']) &&
+             data.prId is string &&
+             data.status in ['queued', 'resolving_conflicts', 'running_tests', 'completed', 'failed'] &&
+             data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+             data.logs is list && data.logs.size() < 100 &&
+             (!('aiResolution' in data) || data.aiResolution is string);
+    }
+
+    function isValidTeam(data) {
+      return hasRequiredFields(['name', 'engineers']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.engineers is list && data.engineers.size() < 50;
+    }
+
+    function isValidUser(data) {
+      return hasRequiredFields(['displayName', 'email', 'role']) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'engineer'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'engineer';
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /branches/{branchId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /pullRequests/{prId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPullRequest(request.resource.data) && request.resource.data.authorUid == request.auth.uid;
+      allow update: if isAuthenticated() && isValidPullRequest(request.resource.data) && 
+                    (request.resource.data.authorUid == resource.data.authorUid) &&
+                    (request.auth.uid == resource.data.authorUid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /mergeJobs/{jobId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidMergeJob(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
