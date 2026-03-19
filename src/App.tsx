@@ -22,7 +22,7 @@ import { LocalCLITab } from './components/LocalCLITab';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
 import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, handleFirestoreError, OperationType } from './firebase';
+import { auth, db, handleFirestoreError, OperationType, isFirebaseConfigured } from './firebase';
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
@@ -82,6 +82,48 @@ export default function App() {
     conflictsResolved: 42,
     testSuccessRate: 98.5,
   });
+
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="min-h-screen bg-[#0A0B0D] flex items-center justify-center p-8 font-sans">
+        <div className="max-w-xl w-full bg-[#1C1D21] border border-white/5 rounded-[40px] p-12 text-center space-y-8 shadow-2xl">
+          <div className="w-20 h-20 bg-orange-500/10 rounded-3xl flex items-center justify-center mx-auto">
+            <ShieldCheck className="text-orange-500" size={40} />
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-white tracking-tight">Firebase Configuration Required</h1>
+            <p className="text-white/40 leading-relaxed">
+              To enable real-time orchestration and secure authentication, you must add your Firebase credentials to the AI Studio Secrets.
+            </p>
+          </div>
+          
+          <div className="bg-black/20 rounded-3xl p-6 text-left space-y-4 border border-white/5">
+            <p className="text-xs font-bold text-white/60 uppercase tracking-widest">Setup Instructions:</p>
+            <ol className="text-sm text-white/40 space-y-3 list-decimal list-inside">
+              <li>Open <b>Settings</b> (⚙️ gear icon, top-right)</li>
+              <li>Select <b>Secrets</b></li>
+              <li>Add the following keys from your Firebase project:
+                <div className="mt-2 grid grid-cols-1 gap-1 font-mono text-[10px] bg-black/40 p-3 rounded-xl border border-white/5">
+                  <span className="text-orange-500/80">VITE_FIREBASE_API_KEY</span>
+                  <span className="text-orange-500/80">VITE_FIREBASE_AUTH_DOMAIN</span>
+                  <span className="text-orange-500/80">VITE_FIREBASE_PROJECT_ID</span>
+                  <span className="text-orange-500/80">VITE_FIREBASE_STORAGE_BUCKET</span>
+                  <span className="text-orange-500/80">VITE_FIREBASE_MESSAGING_SENDER_ID</span>
+                  <span className="text-orange-500/80">VITE_FIREBASE_APP_ID</span>
+                  <span className="text-orange-500/80">VITE_FIREBASE_FIRESTORE_DATABASE_ID</span>
+                </div>
+              </li>
+              <li>The app will automatically rebuild once secrets are saved.</li>
+            </ol>
+          </div>
+
+          <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">
+            GitFlow AI • Secure Orchestration Engine
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Auth Listener
   useEffect(() => {
