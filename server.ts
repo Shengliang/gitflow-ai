@@ -49,6 +49,49 @@ async function startServer() {
     });
   });
 
+  app.get("/api/gitlab/projects", async (req, res) => {
+    const token = process.env.GITLAB_TOKEN;
+    if (!token) {
+      return res.status(400).json({ 
+        error: "GITLAB_TOKEN not configured.",
+        instructions: "Please add GITLAB_TOKEN to Settings -> Secrets in AI Studio."
+      });
+    }
+
+    try {
+      const response = await fetch("https://gitlab.com/api/v4/projects?membership=true&per_page=20&order_by=last_activity_at", {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`GitLab API error (${response.status}): ${errText || response.statusText}`);
+      }
+
+      const projects = await response.json();
+      
+      const repos = projects.map((p: any) => ({
+        id: `gl-${p.id}`,
+        name: p.name,
+        full_name: p.path_with_namespace,
+        platform: 'gitlab',
+        description: p.description || "No description provided.",
+        stars: p.star_count,
+        forks: p.forks_count,
+        isPrivate: p.visibility === 'private',
+        url: p.web_url,
+        lastUpdated: p.last_activity_at
+      }));
+
+      res.json({
+        success: true,
+        repositories: repos
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/gitlab/benchmark", async (req, res) => {
     const token = process.env.GITLAB_TOKEN;
     if (!token) {

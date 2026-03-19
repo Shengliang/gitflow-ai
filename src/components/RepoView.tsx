@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Github, Globe, Search, Filter, ExternalLink, Star, GitFork, Lock, Unlock, RefreshCw } from 'lucide-react';
+import { Github, Globe, Search, Filter, ExternalLink, Star, GitFork, Lock, Unlock, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface Repository {
   id: string;
@@ -15,51 +15,38 @@ interface Repository {
   lastUpdated: string;
 }
 
-const MOCK_REPOS: Repository[] = [
-  {
-    id: 'gh-1',
-    name: 'gitflow-ai-core',
-    full_name: 'shengliang/gitflow-ai-core',
-    platform: 'github',
-    description: 'The core orchestration engine for semantic git merges.',
-    stars: 124,
-    forks: 12,
-    isPrivate: false,
-    url: 'https://github.com/shengliang/gitflow-ai-core',
-    lastUpdated: '2026-03-16T10:00:00Z'
-  },
-  {
-    id: 'gl-1',
-    name: 'gitlab-hackathon-2026',
-    full_name: 'shengliang/gitlab-hackathon-2026',
-    platform: 'gitlab',
-    description: 'Main repository for the GitLab Hackathon 2026 project.',
-    stars: 45,
-    forks: 5,
-    isPrivate: true,
-    url: 'https://gitlab.com/shengliang/gitlab-hackathon-2026',
-    lastUpdated: '2026-03-17T02:30:00Z'
-  },
-  {
-    id: 'gh-2',
-    name: 'react-semantic-ui',
-    full_name: 'shengliang/react-semantic-ui',
-    platform: 'github',
-    description: 'A collection of AI-ready React components.',
-    stars: 89,
-    forks: 8,
-    isPrivate: false,
-    url: 'https://github.com/shengliang/react-semantic-ui',
-    lastUpdated: '2026-03-15T18:45:00Z'
-  }
-];
-
 export const RepoView: React.FC = () => {
+  const [repos, setRepos] = useState<Repository[]>([]);
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<'all' | 'github' | 'gitlab'>('all');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredRepos = MOCK_REPOS.filter(repo => {
+  const fetchRepos = async () => {
+    setIsSyncing(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/gitlab/projects');
+      const data = await response.json();
+      
+      if (data.success) {
+        setRepos(data.repositories);
+      } else {
+        setError(data.error || 'Failed to fetch repositories.');
+      }
+    } catch (err: any) {
+      setError('Network error while fetching repositories.');
+      console.error(err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRepos();
+  }, []);
+
+  const filteredRepos = repos.filter(repo => {
     const matchesSearch = repo.name.toLowerCase().includes(search.toLowerCase()) || 
                          repo.description.toLowerCase().includes(search.toLowerCase());
     const matchesPlatform = platformFilter === 'all' || repo.platform === platformFilter;
@@ -67,8 +54,7 @@ export const RepoView: React.FC = () => {
   });
 
   const handleSync = () => {
-    setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 2000);
+    fetchRepos();
   };
 
   return (
@@ -87,6 +73,22 @@ export const RepoView: React.FC = () => {
           {isSyncing ? 'Syncing...' : 'Sync All Repos'}
         </button>
       </div>
+
+      {error && (
+        <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-4 flex items-center gap-3 text-orange-500">
+          <AlertTriangle size={20} />
+          <div className="flex-1">
+            <p className="text-sm font-bold">GitLab Integration Error</p>
+            <p className="text-xs opacity-80">{error}</p>
+          </div>
+          <button 
+            onClick={fetchRepos}
+            className="text-xs font-bold underline hover:no-underline"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
