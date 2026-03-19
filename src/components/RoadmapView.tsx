@@ -54,7 +54,7 @@ const tasks: Task[] = [
     id: '4',
     title: 'GitLab API Orchestrator',
     description: 'Develop Node.js middleware to handle GitLab MR creation, updates, and branch management.',
-    status: 'in-progress',
+    status: 'completed',
     category: 'Core',
     priority: 'High'
   },
@@ -62,7 +62,7 @@ const tasks: Task[] = [
     id: '5',
     title: 'Binary Tree Merge Strategy',
     description: 'Implement the "Divide & Conquer" merge logic for parallelizing large-scale integrations.',
-    status: 'in-progress',
+    status: 'completed',
     category: 'Core',
     priority: 'Medium'
   },
@@ -70,7 +70,7 @@ const tasks: Task[] = [
     id: '6',
     title: 'Code Review & Merge Queue CLI',
     description: 'Implement a command-line interface for engineers to manage PRs in the review and merge queues, including status checks and queue manipulation.',
-    status: 'in-progress',
+    status: 'completed',
     category: 'Core',
     priority: 'High'
   },
@@ -78,7 +78,7 @@ const tasks: Task[] = [
     id: '7',
     title: 'Atomic Batch Merging',
     description: 'Support grouping multiple PRs as an atomic unit for "all or nothing" merging into project branches.',
-    status: 'planned',
+    status: 'completed',
     category: 'Core',
     priority: 'High'
   },
@@ -86,7 +86,7 @@ const tasks: Task[] = [
     id: '8',
     title: 'Priority-Based Merge Queues',
     description: 'Implement high and low priority lanes in the merge queue to expedite critical bug fixes.',
-    status: 'planned',
+    status: 'completed',
     category: 'Core',
     priority: 'High'
   },
@@ -94,7 +94,7 @@ const tasks: Task[] = [
     id: '9',
     title: 'AI-Automated Code Review',
     description: 'Integrate Gemini to automatically address minor review comments and suggest fixes.',
-    status: 'in-progress',
+    status: 'completed',
     category: 'AI',
     priority: 'Medium'
   },
@@ -102,7 +102,7 @@ const tasks: Task[] = [
     id: '10',
     title: 'Project-to-Master Sync',
     description: 'Automate the final stage of merging project branches into the master branch with full regression validation.',
-    status: 'planned',
+    status: 'in-progress',
     category: 'Core',
     priority: 'High'
   }

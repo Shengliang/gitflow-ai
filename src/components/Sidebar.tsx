@@ -15,6 +15,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpe
     { id: 'prs', icon: GitPullRequest, label: 'Pull Requests' },
     { id: 'teams', icon: Users, label: 'Teams' },
     { id: 'queue', icon: Zap, label: 'Merge Queues' },
+    { id: 'local-cli', icon: Terminal, label: 'Local CLI' },
     { id: 'demo', icon: Bot, label: 'Live Demo' },
     { id: 'roadmap', icon: ListOrdered, label: 'Roadmap' },
     { id: 'design', icon: FileText, label: 'Design Doc' },

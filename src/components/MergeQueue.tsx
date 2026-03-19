@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bot, Cpu, Loader2, Terminal } from 'lucide-react';
+import { Bot, Cpu, Loader2, Terminal, Zap } from 'lucide-react';
 import { MergeJob } from '../types';
 
 interface MergeQueueProps {
@@ -39,8 +39,25 @@ export const MergeQueue: React.FC<MergeQueueProps> = ({ jobs }) => {
                     <Bot className="text-white/60 w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">Job #{job.id.slice(0, 8)}</p>
-                    <p className="text-white/40 text-[10px] font-mono">PR: {job.prId}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-medium text-sm">
+                        {job.isBatch ? job.batchName : `Job #${job.id.slice(0, 8)}`}
+                      </p>
+                      {job.isBatch && (
+                        <span className="text-[10px] bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                          Batch
+                        </span>
+                      )}
+                      {job.priority === 'high' && (
+                        <span className="text-[10px] bg-rose-500/20 text-rose-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Zap size={8} />
+                          High Priority
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-white/40 text-[10px] font-mono">
+                      {job.isBatch ? `${job.batchPrIds?.length} PRs` : `PR: ${job.prId}`}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

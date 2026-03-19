@@ -14,8 +14,9 @@ import { RepoView } from './components/RepoView';
 import { RoadmapView } from './components/RoadmapView';
 import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
+import { LocalCLITab } from './components/LocalCLITab';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
-import { GitPullRequest, Users, GitBranch, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
+import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { 
@@ -66,6 +67,7 @@ export default function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [prs, setPrs] = useState<PullRequest[]>([]);
+  const [selectedPrIds, setSelectedPrIds] = useState<string[]>([]);
   const [queue, setQueue] = useState<MergeJob[]>([]);
   const [mergeQueues, setMergeQueues] = useState<MergeQueueType[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -115,7 +117,14 @@ export default function App() {
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'pullRequests'));
 
     const unsubQueue = onSnapshot(collection(db, 'mergeJobs'), (snapshot) => {
-      setQueue(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MergeJob)));
+      const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MergeJob));
+      // Sort: High priority first, then by creation date
+      const sortedJobs = [...jobs].sort((a, b) => {
+        if (a.priority === 'high' && b.priority !== 'high') return -1;
+        if (a.priority !== 'high' && b.priority === 'high') return 1;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+      setQueue(sortedJobs);
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'mergeJobs'));
 
     const unsubMergeQueues = onSnapshot(collection(db, 'mergeQueues'), (snapshot) => {
@@ -215,15 +224,200 @@ export default function App() {
         status: 'queued',
         progress: 0,
         logs: ['Initializing AI merge orchestrator...', 'Fetching branch metadata...'],
+        createdAt: Date.now()
       };
 
       const jobRef = await addDoc(collection(db, 'mergeJobs'), jobData);
 
-      // Simulate the merge process (in a real app, this would be a backend function)
+      // Simulate the merge process
       simulateMergeProcess(jobRef.id, prId);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'pullRequests/mergeJobs');
     }
+  };
+
+  const handleBatchMerge = async () => {
+    if (!user || selectedPrIds.length === 0) return;
+    
+    const batchName = `Batch Merge ${new Date().toLocaleTimeString()}`;
+    
+    try {
+      // 1. Call backend API to register batch
+      const response = await fetch('/api/merge-queue/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prIds: selectedPrIds, name: batchName })
+      });
+
+      if (!response.ok) throw new Error('Failed to create batch merge job');
+
+      // 2. Update all PR statuses in Firestore
+      for (const prId of selectedPrIds) {
+        await updateDoc(doc(db, 'pullRequests', prId), { status: 'merging' });
+      }
+
+      // 3. Create a single batch merge job in Firestore
+      const jobData = {
+        prId: 'batch',
+        status: 'queued',
+        progress: 0,
+        logs: [
+          `Initializing Atomic Batch Merge: ${batchName}`,
+          `Priority: ${selectedPrIds.length > 3 ? 'high' : 'standard'}`,
+          `Grouping ${selectedPrIds.length} PRs for parallel validation...`,
+          ...selectedPrIds.map(id => ` - Included PR: ${prs.find(p => p.id === id)?.title || id}`)
+        ],
+        isBatch: true,
+        batchPrIds: selectedPrIds,
+        batchName: batchName,
+        priority: selectedPrIds.length > 3 ? 'high' : 'standard',
+        createdAt: Date.now()
+      };
+
+      const jobRef = await addDoc(collection(db, 'mergeJobs'), jobData);
+      
+      // 4. Clear selection
+      setSelectedPrIds([]);
+
+      // 5. Simulate batch merge
+      simulateBatchMergeProcess(jobRef.id, selectedPrIds);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'mergeJobs/batch');
+    }
+  };
+
+  const simulateBatchMergeProcess = (jobId: string, prIds: string[]) => {
+    let progress = 0;
+    const interval = setInterval(async () => {
+      progress += 5;
+      
+      try {
+        const jobDoc = doc(db, 'mergeJobs', jobId);
+        let status: MergeJob['status'] = 'queued';
+        let logs: string[] = [];
+
+        if (progress === 15) {
+          status = 'resolving_conflicts';
+          logs = ['AI analyzing cross-PR dependencies...', 'Validating atomic consistency...'];
+        } else if (progress === 40) {
+          status = 'running_tests';
+          logs = ['Executing parallel test suites for all PRs...', 'Verifying integration stability...'];
+        } else if (progress === 80) {
+          status = 'running_tests';
+          logs = ['Final regression check passed.', 'Preparing atomic commit...'];
+        } else if (progress === 100) {
+          status = 'completed';
+          logs = ['Atomic Batch Merge successful!', 'All PRs merged into target branches.'];
+          clearInterval(interval);
+          
+          for (const prId of prIds) {
+            await updateDoc(doc(db, 'pullRequests', prId), { status: 'merged' });
+          }
+        }
+
+        const currentJob = queue.find(j => j.id === jobId);
+        await updateDoc(jobDoc, { 
+          progress, 
+          status, 
+          logs: [...(currentJob?.logs || []), ...logs] 
+        });
+      } catch (err) {
+        clearInterval(interval);
+      }
+    }, 1500);
+  };
+
+  const handleStartMergeCycle = async (queueId: string) => {
+    if (!user) return;
+    const q = mergeQueues.find(mq => mq.id === queueId);
+    if (!q || q.leafBranches.length === 0) return;
+
+    try {
+      const jobData = {
+        queueId: queueId,
+        status: 'queued',
+        progress: 0,
+        logs: [
+          `Initializing Binary Tree Merge Cycle for ${q.name}...`,
+          `Target Branch: ${q.targetBranch}`,
+          `Strategy: ${q.strategy}`,
+          `Leaf Branches: ${q.leafBranches.join(', ')}`,
+          `Priority: ${q.priority || 'standard'}`,
+          'Building merge tree structure...'
+        ],
+        isBatch: true,
+        batchName: `Cycle: ${q.name}`,
+        priority: q.priority || 'standard',
+        createdAt: Date.now()
+      };
+
+      const jobRef = await addDoc(collection(db, 'mergeJobs'), jobData);
+      
+      if (q.strategy === 'binary_tree') {
+        simulateBinaryTreeMerge(jobRef.id, q.leafBranches, q.targetBranch);
+      } else {
+        simulateMergeProcess(jobRef.id, 'batch');
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'mergeJobs/cycle');
+    }
+  };
+
+  const simulateBinaryTreeMerge = (jobId: string, branches: string[], target: string) => {
+    let progress = 0;
+    let currentLevel = 0;
+    const totalLevels = Math.ceil(Math.log2(branches.length));
+    
+    const interval = setInterval(async () => {
+      progress += 5;
+      
+      try {
+        const jobDoc = doc(db, 'mergeJobs', jobId);
+        let status: MergeJob['status'] = 'queued';
+        let logs: string[] = [];
+
+        if (progress === 10) {
+          status = 'resolving_conflicts';
+          logs = ['Phase 1: Merging leaf nodes...', ...generateMergeLogs(branches, 0)];
+        } else if (progress === 30) {
+          status = 'running_tests';
+          logs = ['Phase 1 Tests: Validating leaf merges...', 'All leaf tests passed.'];
+        } else if (progress === 50) {
+          status = 'resolving_conflicts';
+          logs = ['Phase 2: Merging intermediate nodes...', ...generateMergeLogs(branches, 1)];
+        } else if (progress === 70) {
+          status = 'running_tests';
+          logs = ['Phase 2 Tests: Validating intermediate stability...', 'Integration tests successful.'];
+        } else if (progress === 90) {
+          status = 'resolving_conflicts';
+          logs = [`Final Phase: Merging into ${target}...`, 'AI resolving final integration conflicts...'];
+        } else if (progress === 100) {
+          status = 'completed';
+          logs = [`Binary Tree Merge Cycle successful!`, `Target branch ${target} is now up to date.`];
+          clearInterval(interval);
+        }
+
+        const currentJob = queue.find(j => j.id === jobId);
+        await updateDoc(jobDoc, { 
+          progress, 
+          status, 
+          logs: [...(currentJob?.logs || []), ...logs] 
+        });
+      } catch (err) {
+        clearInterval(interval);
+      }
+    }, 2000);
+  };
+
+  const generateMergeLogs = (branches: string[], level: number) => {
+    const logs: string[] = [];
+    const step = Math.pow(2, level);
+    for (let i = 0; i < branches.length; i += step * 2) {
+      if (i + step < branches.length) {
+        logs.push(`Merging [${branches[i]}] and [${branches[i + step]}]...`);
+      }
+    }
+    return logs;
   };
 
   const simulateMergeProcess = (jobId: string, prId: string) => {
@@ -453,13 +647,38 @@ export default function App() {
                         <GitPullRequest className="text-orange-500" size={20} />
                         Active Pull Requests
                       </h2>
-                      <button className="text-white/40 text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">
-                        View All
-                      </button>
+                      <div className="flex items-center gap-4">
+                        {selectedPrIds.length > 1 && (
+                          <motion.button
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            onClick={handleBatchMerge}
+                            className="bg-orange-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all"
+                          >
+                            <GitMerge size={14} />
+                            Create Atomic Batch ({selectedPrIds.length})
+                          </motion.button>
+                        )}
+                        <button className="text-white/40 text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">
+                          View All
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {prs.filter(pr => pr.status !== 'merged').map(pr => (
-                        <PRCard key={pr.id} pr={pr} onMerge={handleMerge} />
+                        <PRCard 
+                          key={pr.id} 
+                          pr={pr} 
+                          onMerge={handleMerge} 
+                          isSelected={selectedPrIds.includes(pr.id)}
+                          onSelect={(id, selected) => {
+                            if (selected) {
+                              setSelectedPrIds([...selectedPrIds, id]);
+                            } else {
+                              setSelectedPrIds(selectedPrIds.filter(i => i !== id));
+                            }
+                          }}
+                        />
                       ))}
                       {prs.filter(pr => pr.status !== 'merged').length === 0 && (
                         <div className="col-span-full py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
@@ -672,7 +891,7 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
                           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Strategy</p>
                           <select 
@@ -692,6 +911,17 @@ export default function App() {
                             onChange={(e) => updateQueueConfig(q.id, { batchSize: parseInt(e.target.value) })}
                             className="bg-transparent text-sm font-bold text-white focus:outline-none w-full"
                           />
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Priority</p>
+                          <select 
+                            value={q.priority || 'standard'}
+                            onChange={(e) => updateQueueConfig(q.id, { priority: e.target.value as any })}
+                            className="bg-transparent text-sm font-bold text-white focus:outline-none w-full"
+                          >
+                            <option value="standard">Standard</option>
+                            <option value="high">High Priority</option>
+                          </select>
                         </div>
                       </div>
 
@@ -721,7 +951,10 @@ export default function App() {
                       </div>
 
                       <div className="pt-4 flex items-center gap-4">
-                        <button className="flex-1 bg-white text-black font-bold py-3 rounded-2xl hover:bg-orange-500 hover:text-white transition-all text-sm">
+                        <button 
+                          onClick={() => handleStartMergeCycle(q.id)}
+                          className="flex-1 bg-white text-black font-bold py-3 rounded-2xl hover:bg-orange-500 hover:text-white transition-all text-sm"
+                        >
                           Start Merge Cycle
                         </button>
                         <button className="p-3 bg-white/5 rounded-2xl border border-white/5 text-white/60 hover:text-white transition-colors">
@@ -794,6 +1027,8 @@ export default function App() {
               </div>
             </motion.div>
           )}
+
+          {activeTab === 'local-cli' && <LocalCLITab />}
 
           {activeTab === 'judge' && <JudgeView />}
           {activeTab === 'demo' && <DemoView />}

@@ -31,18 +31,27 @@ export const CLIInterface: React.FC<CLIInterfaceProps> = ({ isOpen, onClose, prs
     }
   }, [isOpen]);
 
-  const handleCommand = (cmd: string) => {
-    const parts = cmd.trim().toLowerCase().split(' ');
+  const handleCommand = async (cmd: string) => {
+    const originalCmd = cmd.trim();
+    let normalizedCmd = originalCmd.toLowerCase();
+    
+    // Support git-ai prefix
+    if (normalizedCmd.startsWith('git-ai ')) {
+      normalizedCmd = normalizedCmd.replace('git-ai ', '');
+    }
+
+    const parts = normalizedCmd.split(' ');
     const baseCmd = parts[0];
     const args = parts.slice(1);
 
-    setHistory(prev => [...prev, { type: 'cmd', content: cmd }]);
+    setHistory(prev => [...prev, { type: 'cmd', content: originalCmd }]);
 
     switch (baseCmd) {
       case 'help':
         setHistory(prev => [...prev, { type: 'output', content: `
 Available Commands:
   status          Check merge queue status
+  benchmark       Run GitLab API integration benchmark
   pause           Suspend automated merge workflow
   unpause         Resume automated merge workflow
   reorder <id> <pos>  Change PR position in queue
@@ -51,7 +60,40 @@ Available Commands:
   priority <id> <h|l> Set PR priority
   clear           Clear terminal history
   exit            Close terminal
+
+Tip: You can also use "git-ai <command>"
         ` }]);
+        break;
+      case 'benchmark':
+        setHistory(prev => [...prev, { type: 'output', content: '⚡ Running GitFlow AI GitLab Benchmark...' }]);
+        try {
+          const response = await fetch('/api/gitlab/benchmark');
+          const data = await response.json();
+          
+          if (data.error) {
+            setHistory(prev => [...prev, { type: 'error', content: `❌ Error: ${data.error}` }]);
+            if (data.instructions) {
+              setHistory(prev => [...prev, { type: 'output', content: data.instructions }]);
+            }
+            return;
+          }
+
+          let output = `\n✅ ${data.message}\n\nCONNECTED PROJECTS:\n`;
+          data.projects.forEach((p: any) => {
+            output += `  - ${p.name} (${p.path})\n`;
+          });
+          
+          output += `\nAI FEATURES PERFORMANCE:\n`;
+          data.features.forEach((f: any) => {
+            output += `  ${f.name.padEnd(20)} | ${f.status.padEnd(10)} | ${f.latency}\n`;
+          });
+          
+          output += `\nSUMMARY:\n${data.summary}`;
+          
+          setHistory(prev => [...prev, { type: 'output', content: output }]);
+        } catch (e: any) {
+          setHistory(prev => [...prev, { type: 'error', content: `Error running benchmark: ${e.message}` }]);
+        }
         break;
       case 'status':
         const merging = queue.filter(j => j.status !== 'completed').length;
