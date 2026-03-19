@@ -102,7 +102,7 @@ const tasks: Task[] = [
     id: '10',
     title: 'Project-to-Master Sync',
     description: 'Automate the final stage of merging project branches into the master branch with full regression validation.',
-    status: 'in-progress',
+    status: 'completed',
     category: 'Core',
     priority: 'High'
   }

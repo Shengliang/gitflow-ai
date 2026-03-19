@@ -12,6 +12,7 @@ import { JudgeView } from './components/JudgeView';
 import { DemoView } from './components/DemoView';
 import { RepoView } from './components/RepoView';
 import { RoadmapView } from './components/RoadmapView';
+import { ReleaseView } from './components/ReleaseView';
 import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
 import { LocalCLITab } from './components/LocalCLITab';
@@ -1034,6 +1035,27 @@ export default function App() {
           {activeTab === 'demo' && <DemoView />}
           {activeTab === 'repositories' && <RepoView />}
           {activeTab === 'roadmap' && <RoadmapView />}
+          {activeTab === 'release' && (
+            <motion.div
+              key="release"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <ReleaseView 
+                branches={branches} 
+                onStartSync={(branchName) => {
+                  // Simulate master update
+                  const masterBranch = branches.find(b => b.type === 'master');
+                  if (masterBranch) {
+                    updateDoc(doc(db, 'branches', masterBranch.id), {
+                      lastMergedAt: Date.now()
+                    });
+                  }
+                }} 
+              />
+            </motion.div>
+          )}
           {activeTab === 'design' && <DesignDoc />}
         </AnimatePresence>
 
