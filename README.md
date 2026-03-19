@@ -38,11 +38,17 @@ GitFlow AI is an intelligent orchestrator for GitLab and GitHub workflows, desig
    Create a `.env` file in the root directory and add your API keys:
    ```env
    GEMINI_API_KEY=your_gemini_api_key
-   GOOGLE_MAPS_PLATFORM_KEY=your_google_maps_key (optional for location features)
+   VITE_FIREBASE_API_KEY=your_firebase_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+   VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+   VITE_FIREBASE_APP_ID=your_firebase_app_id
+   VITE_FIREBASE_FIRESTORE_DATABASE_ID=your_firebase_firestore_database_id
    ```
 
 4. **Firebase Setup:**
-   Ensure `firebase-applet-config.json` is present with your Firebase project credentials.
+   The application uses Firebase Firestore for real-time state synchronization. Ensure all `VITE_FIREBASE_*` environment variables are correctly set.
 
 5. **Run the development server:**
    ```bash

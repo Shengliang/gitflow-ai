@@ -14,6 +14,7 @@ import { RepoView } from './components/RepoView';
 import { RoadmapView } from './components/RoadmapView';
 import { ReleaseView } from './components/ReleaseView';
 import { AgentView } from './components/AgentView';
+import { GitLabSyncView } from './components/GitLabSyncView';
 import { ProjectInfo } from './components/ProjectInfo';
 import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
@@ -785,13 +786,21 @@ export default function App() {
               className="space-y-6"
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">GitLab Branches</h2>
-                  <p className="text-white/40">All branches currently tracked in the repository</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-orange-500/10 rounded-2xl flex items-center justify-center">
+                    <GitBranch className="text-orange-500" size={24} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-2xl font-bold">GitLab Branches</h2>
+                      <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] font-mono text-white/40">gitflow-ai</span>
+                    </div>
+                    <p className="text-white/40 text-sm">All branches currently tracked in the gitflow-ai repository</p>
+                  </div>
                 </div>
                 <button 
-                  onClick={() => alert('Fetching latest branches from GitLab...')}
-                  className="bg-white/5 border border-white/10 hover:border-white/30 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all"
+                  onClick={() => setActiveTab('gitlab-sync')}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-xl shadow-orange-500/20"
                 >
                   <RefreshCw size={18} />
                   Sync with GitLab
@@ -1067,6 +1076,16 @@ export default function App() {
                   }
                 }} 
               />
+            </motion.div>
+          )}
+          {activeTab === 'gitlab-sync' && (
+            <motion.div
+              key="gitlab-sync"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <GitLabSyncView />
             </motion.div>
           )}
           {activeTab === 'design' && <DesignDoc />}
