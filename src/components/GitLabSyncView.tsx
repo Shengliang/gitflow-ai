@@ -35,7 +35,11 @@ export const GitLabSyncView: React.FC = () => {
       if (data.success) {
         setGitlabRepo(data.project);
         setRepoCreated(true);
-        setLogs(prev => [...prev, `✅ GitLab repository "gitflow-ai" created successfully. ID: ${data.project.id}`]);
+        if (data.alreadyExists) {
+          setLogs(prev => [...prev, `ℹ️ GitLab repository "gitflow-ai" already exists. ID: ${data.project.id}`]);
+        } else {
+          setLogs(prev => [...prev, `✅ GitLab repository "gitflow-ai" created successfully. ID: ${data.project.id}`]);
+        }
       } else {
         setError(data.error || 'Failed to create repository.');
       }

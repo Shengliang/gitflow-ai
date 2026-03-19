@@ -56,8 +56,29 @@ async function startServer() {
     }
 
     const { name, description } = req.body;
+    const repoName = name || "gitflow-ai";
 
     try {
+      // 1. Check if repository already exists
+      const searchResponse = await fetch(`https://gitlab.com/api/v4/projects?search=${encodeURIComponent(repoName)}&owned=true`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      
+      if (searchResponse.ok) {
+        const existingProjects = await searchResponse.json();
+        const exactMatch = existingProjects.find((p: any) => p.name === repoName || p.path === repoName);
+        
+        if (exactMatch) {
+          return res.json({
+            success: true,
+            alreadyExists: true,
+            message: `GitLab repository "${repoName}" already exists.`,
+            project: exactMatch
+          });
+        }
+      }
+
+      // 2. Create if not exists
       const response = await fetch("https://gitlab.com/api/v4/projects", {
         method: "POST",
         headers: { 
@@ -65,7 +86,7 @@ async function startServer() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          name: name || "gitflow-ai",
+          name: repoName,
           description: description || "Created via GitFlow AI Orchestrator",
           visibility: "public",
           initialize_with_readme: true
