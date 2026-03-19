@@ -1,20 +1,59 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# GitFlow AI: Auto-Merge Orchestrator
 
-# Run and deploy your AI Studio app
+**Primary License:** [MIT License](./LICENSE) (Visible and Detectable)
 
-This contains everything you need to run your app locally.
+GitFlow AI is an intelligent orchestrator for GitLab and GitHub workflows, designed for the **GitLab AI Hackathon 2026**. It automates complex merge strategies, resolves semantic conflicts using Gemini 3.1 Pro, and manages bi-weekly release cycles with high-precision AI diagnostics.
 
-View your app in AI Studio: https://ai.studio/apps/480bf8bc-a686-4ba6-8261-63857eeddd84
+## 🚀 Features
 
-## Run Locally
+- **AI-Powered Merge Queues:** Orchestrate PR merges using Binary Tree or FIFO Batching strategies.
+- **Semantic Conflict Resolution:** Gemini-driven analysis to resolve non-trivial code conflicts based on intent.
+- **Project-to-Master Sync:** Automated final-stage integration with full regression validation.
+- **Priority-Based Queuing:** High-priority lanes for critical bug fixes and emergency patches.
+- **Live AI Presentation:** A multimodal demo agent that explains the architecture and workflow in real-time.
+- **Local CLI Integration:** A terminal-based interface for developers to interact with the AI orchestrator.
 
-**Prerequisites:**  Node.js
+## 🛠️ Tech Stack
 
+- **Frontend:** React 18, Tailwind CSS, Motion (framer-motion).
+- **Backend:** Node.js, Express, Vite Middleware.
+- **Database:** Firebase Firestore (Real-time state synchronization).
+- **AI Engine:** Google Gemini 3.1 Pro (via `@google/genai`).
+- **Icons:** Lucide React.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 📦 Installation & Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://gitlab.com/gitlab-ai-hackathon/gitflow-ai.git
+   cd gitflow-ai
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables:**
+   Create a `.env` file in the root directory and add your API keys:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key
+   GOOGLE_MAPS_PLATFORM_KEY=your_google_maps_key (optional for location features)
+   ```
+
+4. **Firebase Setup:**
+   Ensure `firebase-applet-config.json` is present with your Firebase project credentials.
+
+5. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+## 📄 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for the full text.
+
+## 🤝 GitLab AI Hackathon 2026
+
+This project was built for the **AI Productivity Track** of the GitLab AI Hackathon.
+**Submission URL:** [https://gitlab.com/gitlab-ai-hackathon/gitflow-ai](https://gitlab.com/gitlab-ai-hackathon/gitflow-ai)

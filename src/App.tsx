@@ -13,6 +13,8 @@ import { DemoView } from './components/DemoView';
 import { RepoView } from './components/RepoView';
 import { RoadmapView } from './components/RoadmapView';
 import { ReleaseView } from './components/ReleaseView';
+import { AgentView } from './components/AgentView';
+import { ProjectInfo } from './components/ProjectInfo';
 import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
 import { LocalCLITab } from './components/LocalCLITab';
@@ -1035,6 +1037,17 @@ export default function App() {
           {activeTab === 'demo' && <DemoView />}
           {activeTab === 'repositories' && <RepoView />}
           {activeTab === 'roadmap' && <RoadmapView />}
+          {activeTab === 'project-info' && <ProjectInfo />}
+          {activeTab === 'agent' && (
+            <motion.div
+              key="agent"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <AgentView />
+            </motion.div>
+          )}
           {activeTab === 'release' && (
             <motion.div
               key="release"
