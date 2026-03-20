@@ -194,6 +194,130 @@ async function startServer() {
     }
   });
 
+  app.get("/api/gitlab/projects/:projectId/commits", async (req, res) => {
+    const token = process.env.GITLAB_TOKEN;
+    if (!token) {
+      return res.status(400).json({ error: "GITLAB_TOKEN not configured." });
+    }
+
+    const { projectId } = req.params;
+
+    try {
+      const response = await fetch(`https://gitlab.com/api/v4/projects/${projectId}/repository/commits?per_page=10`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`GitLab API error (${response.status}): ${errText || response.statusText}`);
+      }
+
+      const commits = await response.json();
+      
+      // Also fetch branches to see which branch each commit belongs to (simplified)
+      const branchesResponse = await fetch(`https://gitlab.com/api/v4/projects/${projectId}/repository/branches`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      const branches = branchesResponse.ok ? await branchesResponse.json() : [];
+
+      res.json({
+        success: true,
+        commits: commits.map((c: any) => ({
+          id: c.short_id,
+          full_id: c.id,
+          message: c.title,
+          author: c.author_name,
+          date: c.created_at,
+          branch: branches.find((b: any) => b.commit.id === c.id)?.name || 'master'
+        })),
+        branches: branches.map((b: any) => b.name)
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/gitlab/projects/:projectId/stats", async (req, res) => {
+    const token = process.env.GITLAB_TOKEN;
+    if (!token) {
+      return res.status(400).json({ error: "GITLAB_TOKEN not configured." });
+    }
+
+    const { projectId } = req.params;
+
+    try {
+      const response = await fetch(`https://gitlab.com/api/v4/projects/${projectId}?statistics=true`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`GitLab API error (${response.status}): ${errText || response.statusText}`);
+      }
+
+      const project = await response.json();
+      
+      // Fetch merge requests to get merge count
+      const mrsResponse = await fetch(`https://gitlab.com/api/v4/projects/${projectId}/merge_requests?state=merged&per_page=1`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      const totalMerges = mrsResponse.headers.get('X-Total') || "0";
+
+      res.json({
+        success: true,
+        stats: {
+          totalMerges: parseInt(totalMerges),
+          starCount: project.star_count,
+          forksCount: project.forks_count,
+          repositorySize: project.statistics?.repository_size || 0,
+          commitCount: project.statistics?.commit_count || 0
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/gitlab/projects/:projectId/mrs", async (req, res) => {
+    const token = process.env.GITLAB_TOKEN;
+    if (!token) {
+      return res.status(400).json({ error: "GITLAB_TOKEN not configured." });
+    }
+
+    const { projectId } = req.params;
+
+    try {
+      const response = await fetch(`https://gitlab.com/api/v4/projects/${projectId}/merge_requests?state=opened&per_page=10`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`GitLab API error (${response.status}): ${errText || response.statusText}`);
+      }
+
+      const mrs = await response.json();
+      
+      res.json({
+        success: true,
+        mrs: mrs.map((mr: any) => ({
+          id: mr.id.toString(),
+          title: mr.title,
+          author: mr.author.name,
+          authorAvatar: mr.author.avatar_url,
+          sourceBranch: mr.source_branch,
+          targetBranch: mr.target_branch,
+          status: mr.merge_status === 'can_be_merged' ? 'open' : 'conflicts',
+          createdAt: new Date(mr.created_at).getTime(),
+          url: mr.web_url,
+          labels: mr.labels
+        }))
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/gitlab/benchmark", async (req, res) => {
     const token = process.env.GITLAB_TOKEN;
     if (!token) {

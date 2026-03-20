@@ -87,6 +87,62 @@ export default function App() {
     testSuccessRate: 98.5,
   });
 
+  useEffect(() => {
+    const fetchGitLabData = async () => {
+      try {
+        const projectsRes = await fetch('/api/gitlab/projects');
+        const projectsData = await projectsRes.json();
+        
+        if (projectsRes.ok && projectsData.repositories && projectsData.repositories.length > 0) {
+          const projectId = projectsData.repositories[0].id.replace('gl-', '');
+          
+          // Fetch Stats
+          const statsRes = await fetch(`/api/gitlab/projects/${projectId}/stats`);
+          const statsData = await statsRes.json();
+          
+          if (statsRes.ok && statsData.stats) {
+            setStats(prev => ({
+              ...prev,
+              totalMerges: statsData.stats.totalMerges || prev.totalMerges,
+            }));
+          }
+
+          // Fetch MRs
+          const mrsRes = await fetch(`/api/gitlab/projects/${projectId}/mrs`);
+          const mrsData = await mrsRes.json();
+          
+          if (mrsRes.ok && mrsData.mrs) {
+            // Map GitLab MRs to our PullRequest type
+            const gitlabPrs: PullRequest[] = mrsData.mrs.map((mr: any) => ({
+              id: mr.id,
+              title: mr.title,
+              author: mr.author,
+              authorAvatar: mr.authorAvatar,
+              branch: mr.sourceBranch,
+              targetBranch: mr.targetBranch,
+              status: mr.status,
+              createdAt: mr.createdAt,
+              url: mr.url,
+              labels: mr.labels,
+              platform: 'gitlab'
+            }));
+            
+            // Merge with Firestore PRs, avoiding duplicates
+            setPrs(prev => {
+              const existingIds = new Set(prev.map(p => p.id));
+              const newPrs = gitlabPrs.filter(p => !existingIds.has(p.id));
+              return [...prev, ...newPrs].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching GitLab data:', err);
+      }
+    };
+
+    fetchGitLabData();
+  }, []);
+
   if (!isFirebaseConfigured) {
     return (
       <div className="min-h-screen bg-[#0A0B0D] flex items-center justify-center p-8 font-sans">

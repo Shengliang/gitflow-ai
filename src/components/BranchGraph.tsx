@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Branch } from '../types';
-import { GitCommit, GitBranch, GitMerge, Zap } from 'lucide-react';
+import { GitCommit, GitBranch, GitMerge, Zap, Loader2, AlertCircle } from 'lucide-react';
 
 interface BranchGraphProps {
   branches: Branch[];
@@ -18,51 +18,139 @@ interface CommitNode {
   isMerge?: boolean;
 }
 
-export const BranchGraph: React.FC<BranchGraphProps> = ({ branches }) => {
-  // Enhanced visualization logic
-  const colors = ['#F97316', '#10B981', '#3B82F6', '#A855F7', '#EC4899'];
+export const BranchGraph: React.FC<BranchGraphProps> = ({ branches: initialBranches }) => {
+  const [commits, setCommits] = useState<CommitNode[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string>('gitflow-ai');
   
-  const commits: CommitNode[] = [
-    { id: 'c1', message: 'Initial commit', author: 'Shengliang', branch: 'master', x: 100, y: 300, color: colors[0] },
-    { id: 'c2', message: 'Setup project structure', author: 'Shengliang', branch: 'master', x: 200, y: 300, color: colors[0] },
-    { id: 'c3', message: 'feat: add AI core', author: 'Alice', branch: 'project-alpha', x: 300, y: 200, color: colors[2] },
-    { id: 'c4', message: 'fix: memory leak', author: 'Bob', branch: 'project-alpha', x: 400, y: 200, color: colors[2] },
-    { id: 'c5', message: 'docs: update readme', author: 'Charlie', branch: 'master', x: 500, y: 300, color: colors[0] },
-    { id: 'c6', message: 'feat: implement merge queues', author: 'David', branch: 'project-beta', x: 450, y: 400, color: colors[3] },
-    { id: 'c7', message: 'Merge project-alpha to master', author: 'GitFlow AI', branch: 'master', x: 600, y: 300, color: colors[0], isMerge: true },
-    { id: 'c8', message: 'release: v1.0.0-rc1', author: 'Shengliang', branch: 'release-v1.0', x: 700, y: 100, color: colors[1] },
-  ];
+  const colors = ['#F97316', '#10B981', '#3B82F6', '#A855F7', '#EC4899'];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // 1. Get projects to find the first one
+        const projectsRes = await fetch('/api/gitlab/projects');
+        const projectsData = await projectsRes.json();
+        
+        if (!projectsRes.ok) throw new Error(projectsData.error || 'Failed to fetch projects');
+        
+        if (projectsData.repositories && projectsData.repositories.length > 0) {
+          const project = projectsData.repositories[0];
+          setProjectName(project.name);
+          const projectId = project.id.replace('gl-', '');
+          
+          // 2. Fetch commits for this project
+          const commitsRes = await fetch(`/api/gitlab/projects/${projectId}/commits`);
+          const commitsData = await commitsRes.json();
+          
+          if (!commitsRes.ok) throw new Error(commitsData.error || 'Failed to fetch commits');
+          
+          if (commitsData.commits) {
+            const branchMap: Record<string, number> = {};
+            let branchCount = 0;
+
+            const mappedCommits = commitsData.commits.map((c: any, i: number) => {
+              if (branchMap[c.branch] === undefined) {
+                branchMap[c.branch] = branchCount++;
+              }
+              
+              const branchIndex = branchMap[c.branch];
+              const x = 100 + (i * 70);
+              const y = 300 - (branchIndex * 80);
+              
+              return {
+                id: c.id,
+                message: c.message,
+                author: c.author,
+                branch: c.branch,
+                x,
+                y,
+                color: colors[branchIndex % colors.length],
+                isMerge: c.message.toLowerCase().includes('merge')
+              };
+            });
+            
+            setCommits(mappedCommits.reverse()); // Reverse to show timeline correctly
+          }
+        } else {
+          setError('No GitLab projects found. Please create one or check your token.');
+        }
+      } catch (err: any) {
+        console.error('Error fetching GitLab data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-[#1C1D21] border border-white/5 rounded-[32px] p-10 min-h-[500px] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto" />
+          <p className="text-white/40 font-bold uppercase tracking-widest text-xs">Syncing GitLab Topology...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#1C1D21] border border-white/5 rounded-[32px] p-10 min-h-[500px] flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+          <h3 className="text-white font-bold">GitLab Integration Error</h3>
+          <p className="text-white/40 text-sm">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold hover:bg-white/10 transition-all"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#1C1D21] border border-white/5 rounded-[32px] p-10 overflow-hidden relative min-h-[500px]">
       <div className="flex items-center justify-between mb-12">
         <div>
           <h2 className="text-white font-bold text-2xl tracking-tight italic uppercase">Repository Graph</h2>
-          <p className="text-white/40 text-sm">Visualizing gitflow-ai commit topology</p>
+          <p className="text-white/40 text-sm">Visualizing {projectName} commit topology</p>
         </div>
         <div className="flex gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
-            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-            <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">master</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-            <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">feature</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">release</span>
-          </div>
+          {Array.from(new Set(commits.map(c => c.branch))).slice(0, 3).map((branch, i) => (
+            <div key={branch} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[i % colors.length] }}></div>
+              <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{branch}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="relative h-[350px] w-full">
-        <svg className="w-full h-full" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
-          {/* Connection Lines */}
-          <path d="M 100 300 L 200 300 L 500 300 L 600 300" fill="none" stroke="rgba(249, 115, 22, 0.2)" strokeWidth="3" />
-          <path d="M 200 300 Q 250 200 300 200 L 400 200 Q 500 200 600 300" fill="none" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="3" />
-          <path d="M 200 300 Q 325 400 450 400" fill="none" stroke="rgba(168, 85, 247, 0.2)" strokeWidth="3" />
-          <path d="M 600 300 Q 650 100 700 100" fill="none" stroke="rgba(16, 185, 129, 0.2)" strokeWidth="3" />
+      <div className="relative h-[350px] w-full overflow-x-auto custom-scrollbar">
+        <svg className="h-full" width={Math.max(800, commits.length * 80)} viewBox={`0 0 ${Math.max(800, commits.length * 80)} 500`} preserveAspectRatio="xMidYMid meet">
+          {/* Connection Lines (Simplified) */}
+          {commits.map((commit, i) => {
+            if (i === 0) return null;
+            const prev = commits[i - 1];
+            return (
+              <line 
+                key={`line-${commit.id}`}
+                x1={prev.x} y1={prev.y}
+                x2={commit.x} y2={commit.y}
+                stroke={commit.color}
+                strokeWidth="2"
+                strokeOpacity="0.2"
+              />
+            );
+          })}
 
           {/* Commit Nodes */}
           {commits.map((commit, i) => (
@@ -70,7 +158,7 @@ export const BranchGraph: React.FC<BranchGraphProps> = ({ branches }) => {
               <motion.circle
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: i * 0.05 }}
                 cx={commit.x}
                 cy={commit.y}
                 r={commit.isMerge ? "10" : "6"}
@@ -82,9 +170,9 @@ export const BranchGraph: React.FC<BranchGraphProps> = ({ branches }) => {
               )}
               
               {/* Tooltip-like label */}
-              <g className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <g className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <rect x={commit.x - 60} y={commit.y - 50} width="120" height="40" rx="8" fill="#1C1D21" stroke="rgba(255,255,255,0.1)" />
-                <text x={commit.x} y={commit.y - 35} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">{commit.message}</text>
+                <text x={commit.x} y={commit.y - 35} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">{commit.message.length > 20 ? commit.message.substring(0, 17) + '...' : commit.message}</text>
                 <text x={commit.x} y={commit.y - 22} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="8">{commit.author} • {commit.id}</text>
               </g>
 
@@ -99,16 +187,16 @@ export const BranchGraph: React.FC<BranchGraphProps> = ({ branches }) => {
         {/* Floating AI Badge */}
         <div className="absolute top-0 right-0 p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center gap-2 backdrop-blur-sm">
           <Zap size={14} className="text-orange-500" />
-          <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">AI Topology Analysis Active</span>
+          <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Live GitLab Integration</span>
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-4 gap-4">
+      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
         {commits.slice(-4).map(commit => (
           <div key={commit.id} className="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-2 hover:border-white/20 transition-colors">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono text-orange-500">{commit.id}</span>
-              <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">{new Date().toLocaleDateString()}</span>
+              <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">RECENT</span>
             </div>
             <p className="text-xs text-white font-medium line-clamp-1">{commit.message}</p>
             <div className="flex items-center gap-2">
