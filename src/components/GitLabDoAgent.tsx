@@ -69,32 +69,29 @@ export const GitLabDoAgent: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-[#151619] border-l border-white/10">
       {/* Header */}
-      <div className="p-6 border-b border-white/10 bg-[#1C1D21]/50 backdrop-blur-md">
+      <div className="p-6 border-b border-white/10 bg-[#151619]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center ring-1 ring-indigo-500/30">
+            <div className="w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center ring-1 ring-indigo-500/30">
               <Bot className="text-indigo-500 w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-tight italic">GitLab Duo</h3>
+              <h3 className="text-white font-black tracking-tighter italic uppercase text-sm">GitLab Duo</h3>
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest">Agent Online</span>
+                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-[8px] font-bold text-emerald-500/60 uppercase tracking-widest">Online</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-indigo-500/40 w-4 h-4" />
-            <button 
-              onClick={() => {
-                const event = new CustomEvent('toggleAgent', { detail: false });
-                window.dispatchEvent(event);
-              }}
-              className="p-1.5 hover:bg-white/5 rounded-lg text-white/20 hover:text-white transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <button 
+            onClick={() => {
+              const event = new CustomEvent('toggleAgent', { detail: false });
+              window.dispatchEvent(event);
+            }}
+            className="p-1.5 hover:bg-white/5 rounded-lg text-white/20 hover:text-white transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
       </div>
 

@@ -72,6 +72,7 @@ export default function App() {
   const [isAgentOpen, setIsAgentOpen] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [prs, setPrs] = useState<PullRequest[]>([]);
   const [selectedPrIds, setSelectedPrIds] = useState<string[]>([]);
@@ -214,6 +215,7 @@ export default function App() {
   }, []);
 
   const handleLogin = async (providerType: 'google' | 'github' | 'gitlab' = 'google') => {
+    setLoginError(null);
     try {
       let provider;
       if (providerType === 'google') {
@@ -221,16 +223,21 @@ export default function App() {
       } else if (providerType === 'github') {
         provider = new GithubAuthProvider();
       } else {
-        // GitLab is typically configured as an OIDC provider in Firebase
         provider = new OAuthProvider('oidc.gitlab');
       }
       await signInWithPopup(auth, provider);
     } catch (err) {
       console.error('Login failed', err);
       if (err instanceof Error && err.message.includes('auth/operation-not-allowed')) {
-        alert(`The ${providerType} login provider is not enabled in the Firebase Console. Please enable it to use this feature.`);
+        if (providerType === 'google') {
+          setLoginError(`Google login is not enabled in your Firebase Console. 
+            This usually means the initial setup failed. Please try re-configuring Firebase.`);
+        } else {
+          setLoginError(`The ${providerType} login provider is not enabled in your Firebase Console. 
+            Please go to Authentication > Sign-in method and enable ${providerType}.`);
+        }
       } else {
-        alert(`Login failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setLoginError(`Login failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     }
   };
@@ -554,6 +561,12 @@ export default function App() {
             The intelligent orchestrator for your GitLab and GitHub workflows. Automate merges, resolve conflicts, and scale your productivity.
           </p>
           <div className="space-y-4">
+            {loginError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+                <AlertTriangle className="text-rose-500 shrink-0" size={20} />
+                <p className="text-rose-500 text-xs font-medium leading-relaxed">{loginError}</p>
+              </div>
+            )}
             <button
               onClick={() => handleLogin('google')}
               className="w-full bg-white text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-orange-500 hover:text-white transition-all group"
@@ -1260,11 +1273,11 @@ export default function App() {
       <AnimatePresence mode="popLayout">
         {isAgentOpen && (
           <motion.div
-            initial={{ x: 400, opacity: 0 }}
+            initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
+            exit={{ x: 300, opacity: 0 }}
             transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-            className="w-[400px] border-l border-white/5 bg-[#0A0B0D] z-40"
+            className="w-64 h-full border-l border-white/10 bg-[#151619] z-40 shrink-0"
           >
             <GitLabDoAgent />
           </motion.div>
