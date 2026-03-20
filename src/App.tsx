@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { GitLabDoAgent } from './components/GitLabDoAgent';
 import { PRCard } from './components/PRCard';
 import { MergeQueue } from './components/MergeQueue';
 import { BranchGraph } from './components/BranchGraph';
@@ -20,7 +21,7 @@ import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
 import { LocalCLITab } from './components/LocalCLITab';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
-import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe } from 'lucide-react';
+import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe, PanelLeft, PanelRight, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError, OperationType, isFirebaseConfigured } from './firebase';
 import { 
@@ -67,6 +68,8 @@ const ErrorDisplay = ({ error }: { error: string }) => {
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isCLIOpen, setIsCLIOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAgentOpen, setIsAgentOpen] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -194,8 +197,20 @@ export default function App() {
     const handleTabChange = (e: any) => {
       setActiveTab(e.detail);
     };
+    const handleToggleAgent = (e: any) => {
+      setIsAgentOpen(e.detail);
+    };
+    const handleToggleSidebar = (e: any) => {
+      setIsSidebarOpen(e.detail);
+    };
     window.addEventListener('changeTab', handleTabChange);
-    return () => window.removeEventListener('changeTab', handleTabChange);
+    window.addEventListener('toggleAgent', handleToggleAgent);
+    window.addEventListener('toggleSidebar', handleToggleSidebar);
+    return () => {
+      window.removeEventListener('changeTab', handleTabChange);
+      window.removeEventListener('toggleAgent', handleToggleAgent);
+      window.removeEventListener('toggleSidebar', handleToggleSidebar);
+    };
   }, []);
 
   const handleLogin = async (providerType: 'google' | 'github' | 'gitlab' = 'google') => {
@@ -572,54 +587,116 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0A0B0D] text-white font-sans">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenCLI={() => setIsCLIOpen(true)} />
-      
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight mb-2">
-              {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-            </h1>
-            <p className="text-white/40">GitLab Hackathon 2026 • AI Productivity Track</p>
-          </div>
-          
-          <div className="flex gap-4">
-            <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold overflow-hidden">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    user.displayName?.[0] || 'U'
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold text-white">{user.displayName}</p>
-                  <p className="text-[10px] text-white/40">{user.email}</p>
-                </div>
-              </div>
-              <div className="h-8 w-px bg-white/10"></div>
-              <button 
-                onClick={() => window.location.reload()}
-                className="text-white/40 hover:text-orange-500 transition-colors"
-                title="Reload Page"
-              >
-                <RefreshCw size={18} />
-              </button>
-              <div className="h-8 w-px bg-white/10"></div>
-              <button 
-                onClick={handleLogout}
-                className="text-white/40 hover:text-rose-500 transition-colors"
-                title="Sign Out"
-              >
-                <LogOut size={18} />
-              </button>
-            </div>
-          </div>
-        </header>
+    <div className="flex h-screen bg-[#0A0B0D] text-white font-sans overflow-hidden">
+      {/* Left Sidebar - GitFlow AI Menu */}
+      <AnimatePresence mode="popLayout">
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ x: -300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -300, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+            className="z-40"
+          >
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenCLI={() => setIsCLIOpen(true)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <AnimatePresence mode="wait">
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Toggle Buttons */}
+        <div className="absolute top-8 left-4 z-50 flex gap-2">
+          {!isSidebarOpen && (
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 bg-[#1C1D21] border border-white/5 rounded-xl text-white/40 hover:text-orange-500 transition-all shadow-xl"
+              title="Open Menu"
+            >
+              <PanelLeft size={20} />
+            </button>
+          )}
+        </div>
+
+        <div className="absolute top-8 right-4 z-50 flex gap-2">
+          {!isAgentOpen && (
+            <button 
+              onClick={() => setIsAgentOpen(true)}
+              className="p-2 bg-[#1C1D21] border border-white/5 rounded-xl text-white/40 hover:text-orange-500 transition-all shadow-xl"
+              title="Open Agent"
+            >
+              <MessageSquare size={20} />
+            </button>
+          )}
+        </div>
+
+        <main className="flex-1 p-8 overflow-y-auto">
+          <header className="flex justify-between items-center mb-12">
+            <div className="flex items-center gap-4">
+              {isSidebarOpen && (
+                <button 
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="p-2 bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-orange-500 transition-all"
+                  title="Hide Menu"
+                >
+                  <PanelLeft size={18} />
+                </button>
+              )}
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight mb-2">
+                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                </h1>
+                <p className="text-white/40">GitLab Hackathon 2026 • AI Productivity Track</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold overflow-hidden">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt={user.displayName || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      user.displayName?.[0] || 'U'
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-white">{user.displayName}</p>
+                    <p className="text-[10px] text-white/40">{user.email}</p>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-white/10"></div>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="text-white/40 hover:text-orange-500 transition-colors"
+                  title="Reload Page"
+                >
+                  <RefreshCw size={18} />
+                </button>
+                <div className="h-8 w-px bg-white/10"></div>
+                <button 
+                  onClick={handleLogout}
+                  className="text-white/40 hover:text-rose-500 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut size={18} />
+                </button>
+                {isAgentOpen && (
+                  <>
+                    <div className="h-8 w-px bg-white/10"></div>
+                    <button 
+                      onClick={() => setIsAgentOpen(false)}
+                      className="text-white/40 hover:text-orange-500 transition-colors"
+                      title="Hide Agent"
+                    >
+                      <PanelRight size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
+
+          <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <motion.div
               key="dashboard"
@@ -1089,16 +1166,6 @@ export default function App() {
           {activeTab === 'repositories' && <RepoView />}
           {activeTab === 'roadmap' && <RoadmapView />}
           {activeTab === 'project-info' && <ProjectInfo />}
-          {activeTab === 'agent' && (
-            <motion.div
-              key="agent"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <AgentView />
-            </motion.div>
-          )}
           {activeTab === 'release' && (
             <motion.div
               key="release"
@@ -1189,6 +1256,21 @@ export default function App() {
         )}
       </main>
 
+      {/* Right Sidebar - GitLab Duo Agent */}
+      <AnimatePresence mode="popLayout">
+        {isAgentOpen && (
+          <motion.div
+            initial={{ x: 400, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 400, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+            className="w-[400px] border-l border-white/5 bg-[#0A0B0D] z-40"
+          >
+            <GitLabDoAgent />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <CLIInterface 
         isOpen={isCLIOpen} 
         onClose={() => setIsCLIOpen(false)} 
@@ -1196,5 +1278,6 @@ export default function App() {
         queue={queue}
       />
     </div>
-  );
+  </div>
+);
 }

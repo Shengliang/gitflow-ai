@@ -17,7 +17,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpe
     { id: 'queue', icon: Zap, label: 'Merge Queues' },
     { id: 'release', icon: Rocket, label: 'Release Sync' },
     { id: 'gitlab-sync', icon: RefreshCw, label: 'GitLab Sync' },
-    { id: 'agent', icon: Sparkles, label: 'GitLab Duo' },
     { id: 'local-cli', icon: Terminal, label: 'Local CLI' },
     { id: 'demo', icon: Bot, label: 'Live Demo' },
     { id: 'roadmap', icon: ListOrdered, label: 'Roadmap' },
