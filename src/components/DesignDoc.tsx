@@ -251,11 +251,11 @@ export const DesignDoc: React.FC = () => {
               <div className="relative z-10 grid grid-cols-2 gap-12 w-full max-w-2xl text-left border-t border-zinc-800 pt-12">
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Document Version</p>
-                  <p className="text-white font-bold">v1.0.4 (Stable)</p>
+                  <p className="text-white font-bold">v1.1.0 (Current)</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Release Date</p>
-                  <p className="text-white font-bold">March 17, 2026</p>
+                  <p className="text-white font-bold">March 20, 2026</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Classification</p>
@@ -272,7 +272,7 @@ export const DesignDoc: React.FC = () => {
                   "This document outlines the semantic orchestration layer and multi-platform integration strategies for the GitFlow AI platform."
                 </p>
               </div>
-              <SectionFooter page={1} total={9} />
+              <SectionFooter page={1} total={11} />
             </section>
 
             {/* Title Section (Now Section 1) */}
@@ -292,9 +292,9 @@ export const DesignDoc: React.FC = () => {
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">1. Executive Summary</h2>
               </div>
               <p className="text-zinc-400 leading-relaxed text-lg">
-                GitFlow AI is a next-generation orchestration layer designed to eliminate "Merge Hell" in large-scale engineering organizations. By leveraging the <span className="text-blue-400 font-bold">Gemini 3.1 Pro</span> multimodal model, the system semantically understands code changes, automates complex merge topologies, and provides real-time conflict resolution strategies that go beyond simple line-diffing.
+                GitFlow AI is a next-generation orchestration layer designed to eliminate "Merge Hell" in large-scale engineering organizations. By leveraging the <span className="text-blue-400 font-bold">Gemini 3.1 Pro</span> multimodal model and deep <span className="text-orange-500 font-bold">GitLab API</span> integration, the system semantically understands code changes, automates complex merge topologies, and provides real-time conflict resolution strategies that go beyond simple line-diffing. The platform now features live repository synchronization and automated Merge Request orchestration.
               </p>
-              <SectionFooter page={2} total={9} />
+              <SectionFooter page={2} total={11} />
             </section>
 
             {/* 2. System Architecture */}
@@ -304,7 +304,7 @@ export const DesignDoc: React.FC = () => {
                 <h2 className="text-2xl font-black text-white uppercase tracking-tight">2. System Architecture</h2>
               </div>
               <p className="text-zinc-400 mb-8">
-                The architecture is built on a reactive, event-driven model. It bridges the gap between traditional Git providers and advanced AI reasoning.
+                The architecture is built on a reactive, event-driven model. It bridges the gap between traditional Git providers and advanced AI reasoning using a secure full-stack proxy layer.
               </p>
               <ArchitectureDiagram />
               <div className="grid grid-cols-2 gap-8 mt-12">
@@ -314,20 +314,20 @@ export const DesignDoc: React.FC = () => {
                     Persistence Layer
                   </h3>
                   <p className="text-sm text-zinc-500 leading-relaxed">
-                    Firebase Firestore acts as the global state coordinator. It stores the merge queue, branch health metrics, and the AI's semantic reasoning logs for every operation.
+                    Firebase Firestore acts as the global state coordinator. It stores the merge queue, branch health metrics, and the AI's semantic reasoning logs. Now integrated with live GitLab project statistics.
                   </p>
                 </div>
                 <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
                   <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                    <Cpu size={18} className="text-indigo-400" />
-                    AI Reasoning Engine
+                    <Globe size={18} className="text-emerald-400" />
+                    GitLab API Proxy
                   </h3>
                   <p className="text-sm text-zinc-500 leading-relaxed">
-                    Powered by Gemini 3.1 Pro. Unlike traditional merge tools, it analyzes the <span className="italic">intent</span> of changes, allowing it to resolve logical conflicts that standard Git would flag.
+                    A secure Node.js backend proxies requests to GitLab's REST v4 API, enabling live commit topology visualization and automated Merge Request management without exposing sensitive tokens.
                   </p>
                 </div>
               </div>
-              <SectionFooter page={3} total={9} />
+              <SectionFooter page={3} total={11} />
             </section>
 
             {/* 3. Semantic Conflict Resolution */}
@@ -348,7 +348,7 @@ export const DesignDoc: React.FC = () => {
                   ["User Override", "Pause & Notify", "High-risk logic changes (Security/Auth)."]
                 ]}
               />
-              <SectionFooter page={4} total={9} />
+              <SectionFooter page={4} total={11} />
             </section>
 
             {/* 4. Platform Integration */}
@@ -370,7 +370,7 @@ export const DesignDoc: React.FC = () => {
                   ["CI Trigger", "`POST .../pipeline`", "`POST .../actions/workflows/.../dispatches`"]
                 ]}
               />
-              <SectionFooter page={5} total={9} />
+              <SectionFooter page={5} total={11} />
             </section>
 
             {/* 5. Implementation Details */}
@@ -381,10 +381,24 @@ export const DesignDoc: React.FC = () => {
               </div>
               
               <div className="space-y-6">
+                <div className="border-l-2 border-orange-500 pl-6 py-2">
+                  <h3 className="text-white font-bold text-lg mb-2 italic">GitLab API Integration Architecture</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed">
+                    The platform implements a secure proxy layer for GitLab API v4. This enables the frontend to fetch project metadata, commit history, and merge request status without exposing the <code className="text-orange-400">GITLAB_TOKEN</code> to the client. The proxy handles rate limiting and data transformation, ensuring the UI receives optimized payloads for the repository graph and dashboard statistics.
+                  </p>
+                </div>
+
+                <div className="border-l-2 border-orange-500 pl-6 py-2">
+                  <h3 className="text-white font-bold text-lg mb-2 italic">Live Topology Visualization</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed">
+                    The Repository Graph now uses a dynamic coordinate mapping algorithm that translates GitLab commit parent-child relationships into a visual SVG topology. It automatically identifies merge commits and branch forks in real-time.
+                  </p>
+                </div>
+
                 <div className="border-l-2 border-blue-500 pl-6 py-2">
                   <h3 className="text-white font-bold text-lg mb-2 italic">The "Binary Search" Failure Isolation</h3>
                   <p className="text-zinc-500 text-sm leading-relaxed">
-                    When a batch of PRs fails CI, the orchestrator doesn't just fail the whole batch. It automatically splits the batch into two halves and merges them into separate staging branches. By recursively testing these halves, the AI isolates the specific breaking PR in O(log N) time, allowing the rest of the batch to proceed.
+                    When a batch of PRs fails CI, the orchestrator doesn't just fail the whole batch. It automatically splits the batch into two halves and merges them into separate staging branches. By recursively testing these halves, the AI isolates the specific breaking PR in O(log N) time.
                   </p>
                 </div>
 
@@ -409,7 +423,7 @@ export const DesignDoc: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <SectionFooter page={6} total={9} />
+              <SectionFooter page={6} total={11} />
             </section>
 
             {/* 6. Engineer Workflow & CLI */}
@@ -460,7 +474,7 @@ export const DesignDoc: React.FC = () => {
                   />
                 </div>
               </div>
-              <SectionFooter page={7} total={10} />
+              <SectionFooter page={7} total={11} />
             </section>
 
             {/* 7. Advanced Merge Topologies */}
@@ -477,7 +491,7 @@ export const DesignDoc: React.FC = () => {
                   <li><span className="text-white font-bold">Shadow Integration</span>: Running background merges into a "shadow" branch to detect conflicts days before the actual merge deadline.</li>
                 </ul>
               </div>
-              <SectionFooter page={8} total={10} />
+              <SectionFooter page={8} total={11} />
             </section>
 
             {/* 8. CI/CD Pipeline */}
@@ -513,14 +527,39 @@ test_job:
                   </pre>
                 </div>
               </div>
-              <SectionFooter page={9} total={10} />
+              <SectionFooter page={9} total={11} />
             </section>
 
-            {/* 9. Verification & Authenticity */}
+            {/* 9. Future Roadmap */}
+            <section className="page-break-after">
+              <div className="flex items-center gap-4 mb-6">
+                <Zap className="text-blue-400" size={24} />
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">10. Future Roadmap</h2>
+              </div>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                    <h4 className="text-white font-bold mb-2">Q2 2026</h4>
+                    <p className="text-xs text-zinc-500">Multi-cloud CI/CD support and advanced predictive conflict analysis.</p>
+                  </div>
+                  <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                    <h4 className="text-white font-bold mb-2">Q3 2026</h4>
+                    <p className="text-xs text-zinc-500">Autonomous agent integration for automated bug fixing during merge cycles.</p>
+                  </div>
+                  <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
+                    <h4 className="text-white font-bold mb-2">Q4 2026</h4>
+                    <p className="text-xs text-zinc-500">Enterprise-grade security auditing and compliance reporting automation.</p>
+                  </div>
+                </div>
+              </div>
+              <SectionFooter page={10} total={11} />
+            </section>
+
+            {/* 10. Verification & Authenticity */}
             <section className="page-break-after flex flex-col items-center justify-center text-center py-24">
               <div className="flex items-center gap-4 mb-12">
                 <QrCode className="text-blue-400" size={24} />
-                <h2 className="text-2xl font-black text-white uppercase tracking-tight">9. Verification & Authenticity</h2>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">11. Verification & Authenticity</h2>
               </div>
               <p className="text-zinc-400 mb-12 max-w-lg">
                 Scan the QR code below to verify the authenticity of this technical specification or to access the live deployment of the GitFlow AI orchestration layer.
@@ -537,7 +576,7 @@ test_job:
                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.4em]">Digital Signature Verified</p>
                 <p className="text-[10px] font-mono text-zinc-600">HASH: 7f8e9a2b1c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f</p>
               </div>
-              <SectionFooter page={10} total={10} />
+              <SectionFooter page={11} total={11} />
             </section>
 
             {/* Footer */}
