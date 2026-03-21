@@ -21,7 +21,8 @@ import {
   Volume2,
   Mic,
   Presentation,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles
 } from 'lucide-react';
 
 // Architecture Diagram SVG
@@ -159,6 +160,22 @@ export const DemoView: React.FC = () => {
 
   const slides = [
     {
+      title: "GitFlow AI: Version 1",
+      subtitle: "The Initial Vision",
+      icon: <Sparkles className="text-orange-500" size={32} />,
+      description: "This project is the initial Version 1 of the GitFlow AI project submitted for the GitLab Hackathon 2026. It focuses on the core orchestration and merge strategy logic.",
+      content: (
+        <div className="space-y-6">
+          <div className="p-6 bg-orange-500/5 border border-orange-500/20 rounded-2xl">
+            <h4 className="font-bold text-orange-500 mb-2">Initial Version</h4>
+            <p className="text-sm text-white/60">
+              Version 1 establishes the foundational AI-powered merge orchestration, semantic conflict resolution, and automated rebase cycles. This project represents the core logic submitted for the GitLab Hackathon 2026.
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
       title: "The 'Merge Hell' Problem",
       subtitle: "Why GitFlow AI exists",
       icon: <AlertCircle className="text-red-500" size={32} />,
@@ -266,9 +283,9 @@ export const DemoView: React.FC = () => {
           <Presentation size={14} />
           Interactive Demo Mode
         </div>
-        <h1 className="text-5xl font-bold tracking-tight text-white">Experience GitFlow AI</h1>
+        <h1 className="text-5xl font-bold tracking-tight text-white">Experience GitFlow AI <span className="text-orange-500/60 text-2xl align-top ml-2">v1</span></h1>
         <p className="text-white/40 max-w-2xl mx-auto">
-          Take a guided tour through our advanced merge orchestration system and see how we solve 'Merge Hell' for large teams.
+          Take a guided tour through our advanced merge orchestration system. This is the **initial Version 1** of the GitFlow AI project.
         </p>
         
         <div className="flex justify-center gap-4">
