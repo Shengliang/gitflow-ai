@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, Sparkles, Send, Loader2, User, MessageSquare, ShieldAlert, GitPullRequest, Terminal, X, ChevronRight } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Message {
   role: 'user' | 'assistant';
@@ -33,15 +33,59 @@ export const GitLabDoAgent: React.FC = () => {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const getMergeQueueStatus = {
+        name: "getMergeQueueStatus",
+        parameters: {
+          type: Type.OBJECT,
+          description: "Get the current status of the AI Merge Queue, including active jobs and queued branches.",
+          properties: {}
+        }
+      };
+
+      const getGitLabProjects = {
+        name: "getGitLabProjects",
+        parameters: {
+          type: Type.OBJECT,
+          description: "List the GitLab projects the user has access to.",
+          properties: {}
+        }
+      };
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [{ role: 'user', parts: [{ text: userMessage }] }],
         config: {
-          systemInstruction: "You are GitLab Duo, an advanced AI agent integrated into the GitFlow AI orchestrator. You help developers with code reviews, merge request summaries, security analysis, and workflow automation. Keep your responses concise and professional. Use markdown for code snippets."
+          systemInstruction: "You are GitLab Duo, an advanced AI agent integrated into the GitFlow AI orchestrator. You help developers with code reviews, merge request summaries, security analysis, and workflow automation. Keep your responses concise and professional. Use markdown for code snippets. You have access to real-time data via tools.",
+          tools: [{ functionDeclarations: [getMergeQueueStatus, getGitLabProjects] }]
         }
       });
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response.text || "I'm sorry, I couldn't process that request." }]);
+      const functionCalls = response.functionCalls;
+      if (functionCalls) {
+        const results = [];
+        for (const call of functionCalls) {
+          if (call.name === 'getMergeQueueStatus') {
+            const res = await fetch('/api/merge-queue/status');
+            results.push({ name: call.name, response: await res.json(), id: call.id });
+          } else if (call.name === 'getGitLabProjects') {
+            const res = await fetch('/api/gitlab/projects');
+            results.push({ name: call.name, response: await res.json(), id: call.id });
+          }
+        }
+
+        const finalResponse = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [
+            { role: 'user', parts: [{ text: userMessage }] },
+            { role: 'assistant', parts: response.candidates[0].content.parts },
+            { role: 'user', parts: results.map(r => ({ functionResponse: r })) }
+          ]
+        });
+        setMessages(prev => [...prev, { role: 'assistant', content: finalResponse.text || "I've processed that request." }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: response.text || "I'm sorry, I couldn't process that request." }]);
+      }
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: "System Error: Failed to connect to Duo Engine. Please check your API configuration." }]);

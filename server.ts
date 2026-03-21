@@ -11,40 +11,67 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // In-memory state for "real" functionality
+  const mergeQueue: any[] = [
+    { id: 'job-1', branch: 'feature/auth-refactor', author: 'Shengliang', status: 'running_tests', progress: 65, createdAt: Date.now() - 300000 },
+    { id: 'job-2', branch: 'fix/ui-bugs', author: 'Dev', status: 'queued', progress: 0, createdAt: Date.now() - 60000 },
+    { id: 'job-3', branch: 'feat/ai-summarizer', author: 'GitLabDuo', status: 'queued', progress: 0, createdAt: Date.now() }
+  ];
+
+  const atomicBatches: any[] = [];
+
   app.use(express.json());
 
   // API Routes
   app.get("/api/merge-queue/status", (req, res) => {
-    // Mock merge queue status
+    const activeJob = mergeQueue.find(j => j.status === 'running_tests' || j.status === 'merging');
+    const queuedJobs = mergeQueue.filter(j => j.status === 'queued');
+    
     res.json({
-      status: "active",
-      queueSize: 3,
-      currentJob: {
-        branch: "feature/auth-refactor",
-        progress: 65,
-        status: "running_tests"
-      },
-      nextInQueue: ["fix/ui-bugs", "feat/ai-summarizer"]
+      status: activeJob ? "active" : "idle",
+      queueSize: mergeQueue.length,
+      currentJob: activeJob || null,
+      nextInQueue: queuedJobs.map(j => j.branch)
     });
   });
 
   app.post("/api/merge-queue/register", (req, res) => {
     const { branch, author } = req.body;
+    const newJob = {
+      id: `job-${Math.random().toString(36).substring(7)}`,
+      branch,
+      author: author || 'anonymous',
+      status: 'queued',
+      progress: 0,
+      createdAt: Date.now()
+    };
+    
+    mergeQueue.push(newJob);
     console.log(`Registering branch ${branch} by ${author} to merge queue`);
+    
     res.json({
       success: true,
-      message: `Branch ${branch} registered successfully. Position: 4`,
-      queueId: Math.random().toString(36).substring(7)
+      message: `Branch ${branch} registered successfully. Position: ${mergeQueue.length}`,
+      queueId: newJob.id
     });
   });
 
   app.post("/api/merge-queue/batch", (req, res) => {
     const { prIds, batchName } = req.body;
+    const newBatch = {
+      id: `batch-${Math.random().toString(36).substring(7)}`,
+      name: batchName,
+      prIds,
+      createdAt: Date.now()
+    };
+    
+    atomicBatches.push(newBatch);
     console.log(`Creating atomic batch "${batchName}" with PRs: ${prIds.join(', ')}`);
+    
     res.json({
       success: true,
       message: `Atomic batch "${batchName}" created with ${prIds.length} PRs.`,
-      batchId: Math.random().toString(36).substring(7),
+      batchId: newBatch.id,
       prIds
     });
   });
@@ -397,10 +424,14 @@ async function startServer() {
 
   // Serve CLI scripts
   app.get("/install.sh", (req, res) => {
+    const host = req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const appUrl = process.env.APP_URL || `${protocol}://${host}`;
+    
     const installScript = `#!/bin/bash
 set -e
 
-APP_URL="${req.protocol}://${req.get('host')}"
+APP_URL="${appUrl}"
 INSTALL_DIR="$HOME/.local/bin"
 CLI_NAME="git-ai"
 
@@ -438,17 +469,44 @@ echo "Try running: git-ai status"
   });
 
   app.get("/git-ai.js", (req, res) => {
-    const cliScript = `
+    const host = req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol;
+    const appUrl = process.env.APP_URL || `${protocol}://${host}`;
+
+const cliScript = `
 const { spawnSync } = require('child_process');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-const APP_URL = "${req.protocol}://${req.get('host')}";
+const APP_URL = "${appUrl}";
+const CONFIG_FILE = path.join(os.homedir(), '.git-ai-config.json');
 const args = process.argv.slice(2);
 const command = args[0];
 
+function getConfig() {
+  if (fs.existsSync(CONFIG_FILE)) {
+    try {
+      return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
+function saveConfig(config) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
 async function apiRequest(path, method = 'GET', data = null) {
+  const config = getConfig();
   return new Promise((resolve, reject) => {
     const url = new URL(path, APP_URL);
+    const client = url.protocol === 'https:' ? https : http;
+    
     const options = {
       hostname: url.hostname,
       port: url.port || (url.protocol === 'https:' ? 443 : 80),
@@ -456,10 +514,12 @@ async function apiRequest(path, method = 'GET', data = null) {
       method: method,
       headers: {
         'Content-Type': 'application/json',
+        'X-Git-Token': config.GIT_TOKEN || '',
+        'X-Gemini-Key': config.GEMINI_API_KEY || ''
       }
     };
 
-    const req = http.request(options, (res) => {
+    const req = client.request(options, (res) => {
       let body = '';
       res.on('data', (chunk) => body += chunk);
       res.on('end', () => {
@@ -478,7 +538,29 @@ async function apiRequest(path, method = 'GET', data = null) {
 }
 
 async function run() {
-  if (command === 'status') {
+  if (command === 'config') {
+    const subCommand = args[1];
+    const key = args[2];
+    const value = args[3];
+    
+    if (subCommand === 'set' && key && value) {
+      const config = getConfig();
+      config[key] = value;
+      saveConfig(config);
+      console.log('✅ Config set: ' + key + ' = ' + (key.includes('KEY') || key.includes('TOKEN') ? '********' : value));
+    } else if (subCommand === 'get' && key) {
+      const config = getConfig();
+      console.log(key + ' = ' + (config[key] || 'not set'));
+    } else if (subCommand === 'list') {
+      const config = getConfig();
+      console.log('Current Configuration:');
+      Object.keys(config).forEach(k => {
+        console.log('  ' + k + ' = ' + (k.includes('KEY') || k.includes('TOKEN') ? '********' : config[k]));
+      });
+    } else {
+      console.log('Usage: git-ai config <set|get|list> [key] [value]');
+    }
+  } else if (command === 'status') {
     console.log('📊 Fetching GitFlow AI Merge Queue Status...');
     try {
       const data = await apiRequest('/api/merge-queue/status');
@@ -537,6 +619,7 @@ async function run() {
     console.log('  rebase     AI-monitored rebase for conflict resolution');
     console.log('  status     Check global AI Merge Queue status');
     console.log('  benchmark  Run GitLab API integration benchmark');
+    console.log('  config     Manage API keys and local configuration');
     console.log('  help       Show this help message');
     console.log('\\nFALLBACK:');
     console.log('  Any other command will fall back to standard git.');
