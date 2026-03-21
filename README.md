@@ -47,7 +47,7 @@ You can install the CLI directly from the hosted orchestrator or download it fro
 
 - **Alternative: Install from Source (GitHub):**
   ```bash
-  curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai
+  curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/refs/heads/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai
   
   # Then set your orchestrator URL
   git-ai config set APP_URL https://gitflow-ai-883388654208.us-west1.run.app

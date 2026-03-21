@@ -145,9 +145,9 @@ export const LocalCLITab: React.FC = () => {
                 <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">From GitHub</span>
               </div>
               <div className="bg-black/50 border border-white/5 rounded-xl px-4 py-3 font-mono text-[10px] text-white/60 flex items-center justify-between group">
-                <code className="truncate">curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai</code>
+                <code className="truncate">curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/refs/heads/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai</code>
                 <button 
-                  onClick={() => navigator.clipboard.writeText(`curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai`)}
+                  onClick={() => navigator.clipboard.writeText(`curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/refs/heads/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai`)}
                   className="text-white/20 hover:text-white transition-colors ml-2"
                 >
                   <Copy size={14} />
