@@ -11,12 +11,17 @@ export interface Branch {
   type: BranchType;
   teamId?: string;
   lastMergedAt?: number;
+  lastCommit?: string;
+  status?: string;
 }
 
 export interface Team {
   id: string;
   name: string;
   engineers: string[];
+  members?: number;
+  activeMRs?: number;
+  performance?: number;
 }
 
 export interface PullRequest {
@@ -30,6 +35,11 @@ export interface PullRequest {
   createdAt: number;
   conflictDetails?: string;
   testResults?: string;
+  authorAvatar?: string;
+  branch?: string;
+  url?: string;
+  labels?: string[];
+  platform?: string;
 }
 
 export interface MergeJob {

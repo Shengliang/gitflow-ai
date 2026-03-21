@@ -21,62 +21,60 @@ import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
 import { LocalCLITab } from './components/LocalCLITab';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
-import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe, PanelLeft, PanelRight, MessageSquare } from 'lucide-react';
+import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe, PanelLeft, PanelRight, MessageSquare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db, handleFirestoreError, OperationType, isFirebaseConfigured } from './firebase';
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  OAuthProvider,
-  signOut,
-  User as FirebaseUser
-} from 'firebase/auth';
-import { 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  doc, 
-  query, 
-  orderBy,
-  getDocFromServer
-} from 'firebase/firestore';
-
-// Error Boundary Component
-const ErrorDisplay = ({ error }: { error: string }) => {
-  let displayError = error;
-  try {
-    const parsed = JSON.parse(error);
-    displayError = `Firestore Error: ${parsed.operationType} at ${parsed.path} - ${parsed.error}`;
-  } catch (e) {
-    // Not a JSON error
-  }
-
-  return (
-    <div className="fixed bottom-8 right-8 max-w-md bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 flex gap-3 items-start animate-in slide-in-from-bottom-4">
-      <AlertTriangle className="text-rose-500 shrink-0" size={20} />
-      <div>
-        <p className="text-rose-500 font-bold text-xs uppercase tracking-widest mb-1">System Error</p>
-        <p className="text-white/80 text-sm">{displayError}</p>
-      </div>
-    </div>
-  );
-};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isCLIOpen, setIsCLIOpen] = useState(false);
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [user, setUser] = useState<{ uid: string; displayName: string; email: string; photoURL?: string } | null>({
+    uid: 'mock-user-123',
+    displayName: 'GitLab Developer',
+    email: 'dev@gitlab.com',
+    photoURL: 'https://picsum.photos/seed/gitlab/100/100'
+  });
+  const [isAuthReady, setIsAuthReady] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [prs, setPrs] = useState<PullRequest[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([
+    { id: '1', name: 'master', type: 'master', lastCommit: 'Initial commit', status: 'stable' },
+    { id: '2', name: 'feature/ai-orchestrator', type: 'project', lastCommit: 'Add Gemini integration', status: 'active' },
+    { id: '3', name: 'fix/merge-conflicts', type: 'project', lastCommit: 'Resolve binary tree issues', status: 'active' }
+  ]);
+  const [prs, setPrs] = useState<PullRequest[]>([
+    {
+      id: 'pr-1',
+      title: 'feat: AI-powered binary tree merge strategy',
+      author: 'Shengliang',
+      authorUid: 'user-1',
+      authorAvatar: 'https://picsum.photos/seed/sheng/100/100',
+      branch: 'feature/ai-orchestrator',
+      sourceBranch: 'feature/ai-orchestrator',
+      targetBranch: 'master',
+      status: 'open',
+      createdAt: Date.now() - 3600000,
+      url: '#',
+      labels: ['ai', 'core'],
+      platform: 'gitlab'
+    }
+  ]);
   const [selectedPrIds, setSelectedPrIds] = useState<string[]>([]);
   const [queue, setQueue] = useState<MergeJob[]>([]);
-  const [mergeQueues, setMergeQueues] = useState<MergeQueueType[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [mergeQueues, setMergeQueues] = useState<MergeQueueType[]>([
+    {
+      id: 'mq-1',
+      name: 'Main Release Queue',
+      targetBranch: 'master',
+      strategy: 'binary_tree',
+      batchSize: 5,
+      leafBranches: ['feature/auth', 'feature/ui', 'fix/bugs'],
+      isActive: true,
+      createdAt: Date.now()
+    }
+  ]);
+  const [teams, setTeams] = useState<Team[]>([
+    { id: 't1', name: 'Core Engine', engineers: ['Alice', 'Bob'], members: 5, activeMRs: 3, performance: 98 },
+    { id: 't2', name: 'AI Research', engineers: ['Charlie', 'David'], members: 3, activeMRs: 2, performance: 95 }
+  ]);
   const [error, setError] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
@@ -125,7 +123,7 @@ export default function App() {
               platform: 'gitlab'
             }));
             
-            // Merge with Firestore PRs, avoiding duplicates
+            // Merge with GitLab PRs, avoiding duplicates
             setPrs(prev => {
               const existingIds = new Set(prev.map(p => p.id));
               const newPrs = gitlabPrs.filter(p => !existingIds.has(p.id));
@@ -141,113 +139,6 @@ export default function App() {
     fetchGitLabData();
   }, []);
 
-  if (!isFirebaseConfigured) {
-    return (
-      <div className="min-h-screen bg-[#0A0B0D] flex items-center justify-center p-8 font-sans">
-        <div className="max-w-xl w-full bg-[#1C1D21] border border-white/5 rounded-[40px] p-12 text-center space-y-8 shadow-2xl">
-          <div className="w-20 h-20 bg-orange-500/10 rounded-3xl flex items-center justify-center mx-auto">
-            <ShieldCheck className="text-orange-500" size={40} />
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Firebase Configuration Required</h1>
-            <p className="text-white/40 leading-relaxed">
-              To enable real-time orchestration and secure authentication, you must add your Firebase credentials to the AI Studio Secrets.
-            </p>
-          </div>
-          
-          <div className="bg-black/20 rounded-3xl p-6 text-left space-y-4 border border-white/5">
-            <p className="text-xs font-bold text-white/60 uppercase tracking-widest">Setup Instructions:</p>
-            <ol className="text-sm text-white/40 space-y-3 list-decimal list-inside">
-              <li>Open <b>Settings</b> (⚙️ gear icon, top-right)</li>
-              <li>Select <b>Secrets</b></li>
-              <li>Add the following keys from your Firebase project:
-                <div className="mt-2 grid grid-cols-1 gap-1 font-mono text-[10px] bg-black/40 p-3 rounded-xl border border-white/5">
-                  <span className="text-orange-500/80">VITE_FIREBASE_API_KEY</span>
-                  <span className="text-orange-500/80">VITE_FIREBASE_AUTH_DOMAIN</span>
-                  <span className="text-orange-500/80">VITE_FIREBASE_PROJECT_ID</span>
-                  <span className="text-orange-500/80">VITE_FIREBASE_STORAGE_BUCKET</span>
-                  <span className="text-orange-500/80">VITE_FIREBASE_MESSAGING_SENDER_ID</span>
-                  <span className="text-orange-500/80">VITE_FIREBASE_APP_ID</span>
-                  <span className="text-orange-500/80">VITE_FIREBASE_FIRESTORE_DATABASE_ID</span>
-                </div>
-              </li>
-              <li>The app will automatically rebuild once secrets are saved.</li>
-            </ol>
-          </div>
-
-          <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">
-            GitFlow AI • Secure Orchestration Engine
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Auth Listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsAuthReady(true);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Connection Test
-  useEffect(() => {
-    if (isAuthReady && user) {
-      const testConnection = async () => {
-        try {
-          await getDocFromServer(doc(db, 'test', 'connection'));
-        } catch (error) {
-          if (error instanceof Error && error.message.includes('the client is offline')) {
-            setError("Firebase connection failed. Please check your configuration.");
-          }
-        }
-      };
-      testConnection();
-    }
-  }, [isAuthReady, user]);
-
-  // Firestore Listeners
-  useEffect(() => {
-    if (!isAuthReady || !user) return;
-
-    const unsubBranches = onSnapshot(collection(db, 'branches'), (snapshot) => {
-      setBranches(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Branch)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'branches'));
-
-    const unsubPRs = onSnapshot(query(collection(db, 'pullRequests'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setPrs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PullRequest)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'pullRequests'));
-
-    const unsubQueue = onSnapshot(collection(db, 'mergeJobs'), (snapshot) => {
-      const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MergeJob));
-      // Sort: High priority first, then by creation date
-      const sortedJobs = [...jobs].sort((a, b) => {
-        if (a.priority === 'high' && b.priority !== 'high') return -1;
-        if (a.priority !== 'high' && b.priority === 'high') return 1;
-        return (b.createdAt || 0) - (a.createdAt || 0);
-      });
-      setQueue(sortedJobs);
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'mergeJobs'));
-
-    const unsubMergeQueues = onSnapshot(collection(db, 'mergeQueues'), (snapshot) => {
-      setMergeQueues(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MergeQueueType)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'mergeQueues'));
-
-    const unsubTeams = onSnapshot(collection(db, 'teams'), (snapshot) => {
-      setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'teams'));
-
-    return () => {
-      unsubBranches();
-      unsubPRs();
-      unsubQueue();
-      unsubMergeQueues();
-      unsubTeams();
-    };
-  }, [isAuthReady, user]);
-
   useEffect(() => {
     const handleTabChange = (e: any) => {
       setActiveTab(e.detail);
@@ -260,92 +151,62 @@ export default function App() {
 
   const handleLogin = async (providerType: 'google' | 'github' | 'gitlab' = 'google') => {
     setLoginError(null);
-    try {
-      let provider;
-      if (providerType === 'google') {
-        provider = new GoogleAuthProvider();
-      } else if (providerType === 'github') {
-        provider = new GithubAuthProvider();
-      } else {
-        provider = new OAuthProvider('oidc.gitlab');
-      }
-      await signInWithPopup(auth, provider);
-    } catch (err) {
-      console.error('Login failed', err);
-      if (err instanceof Error && err.message.includes('auth/operation-not-allowed')) {
-        if (providerType === 'google') {
-          setLoginError(`Google login is not enabled in your Firebase Console. 
-            This usually means the initial setup failed. Please try re-configuring Firebase.`);
-        } else {
-          setLoginError(`The ${providerType} login provider is not enabled in your Firebase Console. 
-            Please go to Authentication > Sign-in method and enable ${providerType}.`);
-        }
-      } else {
-        setLoginError(`Login failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      }
-    }
+    // Mock login
+    setUser({
+      uid: 'mock-user-123',
+      displayName: 'GitLab Developer',
+      email: 'dev@gitlab.com',
+      photoURL: 'https://picsum.photos/seed/gitlab/100/100'
+    });
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => setUser(null);
 
-  const createMergeQueue = async () => {
-    try {
-      await addDoc(collection(db, 'mergeQueues'), {
-        name: `New Release Queue ${mergeQueues.length + 1}`,
-        targetBranch: 'master',
-        strategy: 'binary_tree',
-        batchSize: 5,
-        leafBranches: [],
-        isActive: true,
-        createdAt: Date.now()
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeQueues');
-    }
+  const createMergeQueue = () => {
+    const newQueue: MergeQueueType = {
+      id: `mq-${Date.now()}`,
+      name: `New Release Queue ${mergeQueues.length + 1}`,
+      targetBranch: 'master',
+      strategy: 'binary_tree',
+      batchSize: 5,
+      leafBranches: [],
+      isActive: true,
+      createdAt: Date.now()
+    };
+    setMergeQueues(prev => [...prev, newQueue]);
   };
 
-  const deleteMergeQueue = async (id: string) => {
-    try {
-      await updateDoc(doc(db, 'mergeQueues', id), { isActive: false });
-      // In a real app we might delete, here we just deactivate
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeQueues');
-    }
+  const deleteMergeQueue = (id: string) => {
+    setMergeQueues(prev => prev.map(q => q.id === id ? { ...q, isActive: false } : q));
   };
 
-  const updateQueueConfig = async (id: string, updates: Partial<MergeQueueType>) => {
-    try {
-      await updateDoc(doc(db, 'mergeQueues', id), updates);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeQueues');
-    }
+  const updateQueueConfig = (id: string, updates: Partial<MergeQueueType>) => {
+    setMergeQueues(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
   };
 
-  const handleMerge = async (prId: string) => {
+  const handleMerge = (prId: string) => {
     if (!user) return;
     const pr = prs.find(p => p.id === prId);
     if (!pr) return;
 
-    try {
-      // Update PR status
-      await updateDoc(doc(db, 'pullRequests', prId), { status: 'merging' });
+    // Update PR status
+    setPrs(prev => prev.map(p => p.id === prId ? { ...p, status: 'merging' } : p));
 
-      // Create a new merge job
-      const jobData = {
-        prId: prId,
-        status: 'queued',
-        progress: 0,
-        logs: ['Initializing AI merge orchestrator...', 'Fetching branch metadata...'],
-        createdAt: Date.now()
-      };
+    // Create a new merge job
+    const jobId = `job-${Date.now()}`;
+    const jobData: MergeJob = {
+      id: jobId,
+      prId: prId,
+      status: 'queued',
+      progress: 0,
+      logs: ['Initializing AI merge orchestrator...', 'Fetching branch metadata...'],
+      createdAt: Date.now()
+    };
 
-      const jobRef = await addDoc(collection(db, 'mergeJobs'), jobData);
+    setQueue(prev => [jobData, ...prev]);
 
-      // Simulate the merge process
-      simulateMergeProcess(jobRef.id, prId);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'pullRequests/mergeJobs');
-    }
+    // Simulate the merge process
+    simulateMergeProcess(jobId, prId);
   };
 
   const handleBatchMerge = async () => {
@@ -353,171 +214,153 @@ export default function App() {
     
     const batchName = `Batch Merge ${new Date().toLocaleTimeString()}`;
     
-    try {
-      // 1. Call backend API to register batch
-      const response = await fetch('/api/merge-queue/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prIds: selectedPrIds, name: batchName })
-      });
+    // Update all PR statuses
+    setPrs(prev => prev.map(p => selectedPrIds.includes(p.id) ? { ...p, status: 'merging' } : p));
 
-      if (!response.ok) throw new Error('Failed to create batch merge job');
+    // Create a single batch merge job
+    const jobId = `job-batch-${Date.now()}`;
+    const jobData: MergeJob = {
+      id: jobId,
+      prId: 'batch',
+      status: 'queued',
+      progress: 0,
+      logs: [
+        `Initializing Atomic Batch Merge: ${batchName}`,
+        `Priority: ${selectedPrIds.length > 3 ? 'high' : 'standard'}`,
+        `Grouping ${selectedPrIds.length} PRs for parallel validation...`,
+        ...selectedPrIds.map(id => ` - Included PR: ${prs.find(p => p.id === id)?.title || id}`)
+      ],
+      isBatch: true,
+      batchPrIds: selectedPrIds,
+      batchName: batchName,
+      priority: selectedPrIds.length > 3 ? 'high' : 'standard',
+      createdAt: Date.now()
+    };
 
-      // 2. Update all PR statuses in Firestore
-      for (const prId of selectedPrIds) {
-        await updateDoc(doc(db, 'pullRequests', prId), { status: 'merging' });
-      }
+    setQueue(prev => [jobData, ...prev]);
+    
+    // Clear selection
+    const currentSelected = [...selectedPrIds];
+    setSelectedPrIds([]);
 
-      // 3. Create a single batch merge job in Firestore
-      const jobData = {
-        prId: 'batch',
-        status: 'queued',
-        progress: 0,
-        logs: [
-          `Initializing Atomic Batch Merge: ${batchName}`,
-          `Priority: ${selectedPrIds.length > 3 ? 'high' : 'standard'}`,
-          `Grouping ${selectedPrIds.length} PRs for parallel validation...`,
-          ...selectedPrIds.map(id => ` - Included PR: ${prs.find(p => p.id === id)?.title || id}`)
-        ],
-        isBatch: true,
-        batchPrIds: selectedPrIds,
-        batchName: batchName,
-        priority: selectedPrIds.length > 3 ? 'high' : 'standard',
-        createdAt: Date.now()
-      };
-
-      const jobRef = await addDoc(collection(db, 'mergeJobs'), jobData);
-      
-      // 4. Clear selection
-      setSelectedPrIds([]);
-
-      // 5. Simulate batch merge
-      simulateBatchMergeProcess(jobRef.id, selectedPrIds);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeJobs/batch');
-    }
+    // Simulate batch merge
+    simulateBatchMergeProcess(jobId, currentSelected);
   };
 
   const simulateBatchMergeProcess = (jobId: string, prIds: string[]) => {
     let progress = 0;
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       progress += 5;
       
-      try {
-        const jobDoc = doc(db, 'mergeJobs', jobId);
-        let status: MergeJob['status'] = 'queued';
-        let logs: string[] = [];
+      let status: MergeJob['status'] = 'queued';
+      let logs: string[] = [];
 
-        if (progress === 15) {
-          status = 'resolving_conflicts';
-          logs = ['AI analyzing cross-PR dependencies...', 'Validating atomic consistency...'];
-        } else if (progress === 40) {
-          status = 'running_tests';
-          logs = ['Executing parallel test suites for all PRs...', 'Verifying integration stability...'];
-        } else if (progress === 80) {
-          status = 'running_tests';
-          logs = ['Final regression check passed.', 'Preparing atomic commit...'];
-        } else if (progress === 100) {
-          status = 'completed';
-          logs = ['Atomic Batch Merge successful!', 'All PRs merged into target branches.'];
-          clearInterval(interval);
-          
-          for (const prId of prIds) {
-            await updateDoc(doc(db, 'pullRequests', prId), { status: 'merged' });
-          }
-        }
-
-        const currentJob = queue.find(j => j.id === jobId);
-        await updateDoc(jobDoc, { 
-          progress, 
-          status, 
-          logs: [...(currentJob?.logs || []), ...logs] 
-        });
-      } catch (err) {
+      if (progress === 15) {
+        status = 'resolving_conflicts';
+        logs = ['AI analyzing cross-PR dependencies...', 'Validating atomic consistency...'];
+      } else if (progress === 40) {
+        status = 'running_tests';
+        logs = ['Executing parallel test suites for all PRs...', 'Verifying integration stability...'];
+      } else if (progress === 80) {
+        status = 'running_tests';
+        logs = ['Final regression check passed.', 'Preparing atomic commit...'];
+      } else if (progress === 100) {
+        status = 'completed';
+        logs = ['Atomic Batch Merge successful!', 'All PRs merged into target branches.'];
         clearInterval(interval);
+        
+        setPrs(prev => prev.map(p => prIds.includes(p.id) ? { ...p, status: 'merged' } : p));
       }
+
+      setQueue(prev => prev.map(job => {
+        if (job.id === jobId) {
+          return {
+            ...job,
+            progress,
+            status: status !== 'queued' ? status : job.status,
+            logs: [...job.logs, ...logs]
+          };
+        }
+        return job;
+      }));
     }, 1500);
   };
 
-  const handleStartMergeCycle = async (queueId: string) => {
+  const handleStartMergeCycle = (queueId: string) => {
     if (!user) return;
     const q = mergeQueues.find(mq => mq.id === queueId);
     if (!q || q.leafBranches.length === 0) return;
 
-    try {
-      const jobData = {
-        queueId: queueId,
-        status: 'queued',
-        progress: 0,
-        logs: [
-          `Initializing Binary Tree Merge Cycle for ${q.name}...`,
-          `Target Branch: ${q.targetBranch}`,
-          `Strategy: ${q.strategy}`,
-          `Leaf Branches: ${q.leafBranches.join(', ')}`,
-          `Priority: ${q.priority || 'standard'}`,
-          'Building merge tree structure...'
-        ],
-        isBatch: true,
-        batchName: `Cycle: ${q.name}`,
-        priority: q.priority || 'standard',
-        createdAt: Date.now()
-      };
+    const jobId = `job-cycle-${Date.now()}`;
+    const jobData: MergeJob = {
+      id: jobId,
+      queueId: queueId,
+      status: 'queued',
+      progress: 0,
+      logs: [
+        `Initializing Binary Tree Merge Cycle for ${q.name}...`,
+        `Target Branch: ${q.targetBranch}`,
+        `Strategy: ${q.strategy}`,
+        `Leaf Branches: ${q.leafBranches.join(', ')}`,
+        `Priority: ${q.priority || 'standard'}`,
+        'Building merge tree structure...'
+      ],
+      isBatch: true,
+      batchName: `Cycle: ${q.name}`,
+      priority: q.priority || 'standard',
+      createdAt: Date.now()
+    };
 
-      const jobRef = await addDoc(collection(db, 'mergeJobs'), jobData);
-      
-      if (q.strategy === 'binary_tree') {
-        simulateBinaryTreeMerge(jobRef.id, q.leafBranches, q.targetBranch);
-      } else {
-        simulateMergeProcess(jobRef.id, 'batch');
-      }
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeJobs/cycle');
+    setQueue(prev => [jobData, ...prev]);
+    
+    if (q.strategy === 'binary_tree') {
+      simulateBinaryTreeMerge(jobId, q.leafBranches, q.targetBranch);
+    } else {
+      simulateMergeProcess(jobId, 'batch');
     }
   };
 
   const simulateBinaryTreeMerge = (jobId: string, branches: string[], target: string) => {
     let progress = 0;
-    let currentLevel = 0;
-    const totalLevels = Math.ceil(Math.log2(branches.length));
     
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       progress += 5;
       
-      try {
-        const jobDoc = doc(db, 'mergeJobs', jobId);
-        let status: MergeJob['status'] = 'queued';
-        let logs: string[] = [];
+      let status: MergeJob['status'] = 'queued';
+      let logs: string[] = [];
 
-        if (progress === 10) {
-          status = 'resolving_conflicts';
-          logs = ['Phase 1: Merging leaf nodes...', ...generateMergeLogs(branches, 0)];
-        } else if (progress === 30) {
-          status = 'running_tests';
-          logs = ['Phase 1 Tests: Validating leaf merges...', 'All leaf tests passed.'];
-        } else if (progress === 50) {
-          status = 'resolving_conflicts';
-          logs = ['Phase 2: Merging intermediate nodes...', ...generateMergeLogs(branches, 1)];
-        } else if (progress === 70) {
-          status = 'running_tests';
-          logs = ['Phase 2 Tests: Validating intermediate stability...', 'Integration tests successful.'];
-        } else if (progress === 90) {
-          status = 'resolving_conflicts';
-          logs = [`Final Phase: Merging into ${target}...`, 'AI resolving final integration conflicts...'];
-        } else if (progress === 100) {
-          status = 'completed';
-          logs = [`Binary Tree Merge Cycle successful!`, `Target branch ${target} is now up to date.`];
-          clearInterval(interval);
-        }
-
-        const currentJob = queue.find(j => j.id === jobId);
-        await updateDoc(jobDoc, { 
-          progress, 
-          status, 
-          logs: [...(currentJob?.logs || []), ...logs] 
-        });
-      } catch (err) {
+      if (progress === 10) {
+        status = 'resolving_conflicts';
+        logs = ['Phase 1: Merging leaf nodes...', ...generateMergeLogs(branches, 0)];
+      } else if (progress === 30) {
+        status = 'running_tests';
+        logs = ['Phase 1 Tests: Validating leaf merges...', 'All leaf tests passed.'];
+      } else if (progress === 50) {
+        status = 'resolving_conflicts';
+        logs = ['Phase 2: Merging intermediate nodes...', ...generateMergeLogs(branches, 1)];
+      } else if (progress === 70) {
+        status = 'running_tests';
+        logs = ['Phase 2 Tests: Validating intermediate stability...', 'Integration tests successful.'];
+      } else if (progress === 90) {
+        status = 'resolving_conflicts';
+        logs = [`Final Phase: Merging into ${target}...`, 'AI resolving final integration conflicts...'];
+      } else if (progress === 100) {
+        status = 'completed';
+        logs = [`Binary Tree Merge Cycle successful!`, `Target branch ${target} is now up to date.`];
         clearInterval(interval);
       }
+
+      setQueue(prev => prev.map(job => {
+        if (job.id === jobId) {
+          return {
+            ...job,
+            progress,
+            status: status !== 'queued' ? status : job.status,
+            logs: [...job.logs, ...logs]
+          };
+        }
+        return job;
+      }));
     }, 2000);
   };
 
@@ -534,47 +377,39 @@ export default function App() {
 
   const simulateMergeProcess = (jobId: string, prId: string) => {
     let progress = 0;
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       progress += 10;
       
-      try {
-        const jobDoc = doc(db, 'mergeJobs', jobId);
-        let status: MergeJob['status'] = 'queued';
-        let logs: string[] = [];
+      let status: MergeJob['status'] = 'queued';
+      let logs: string[] = [];
 
-        if (progress === 20) {
-          status = 'resolving_conflicts';
-          logs = ['AI analyzing code conflicts...', 'Applying semantic resolution...'];
-        } else if (progress === 60) {
-          status = 'running_tests';
-          logs = ['Executing automated test suite...', 'Analyzing coverage reports...'];
-        } else if (progress === 100) {
-          status = 'completed';
-          logs = ['Merge successful!', 'Updating primary branch...'];
-          clearInterval(interval);
-          
-          await updateDoc(doc(db, 'pullRequests', prId), { status: 'merged' });
-          
-          setTimeout(async () => {
-            // In a real app, we might keep the job history, but for simulation we clean up
-            // await deleteDoc(doc(db, 'mergeJobs', jobId));
-          }, 3000);
-        }
-
-        if (logs.length > 0) {
-          // In a real app we'd append to logs, here we just update
-          await updateDoc(jobDoc, { 
-            progress, 
-            status, 
-            logs: [...(queue.find(j => j.id === jobId)?.logs || []), ...logs] 
-          });
-        } else {
-          await updateDoc(jobDoc, { progress });
-        }
-      } catch (err) {
+      if (progress === 20) {
+        status = 'resolving_conflicts';
+        logs = ['AI analyzing code conflicts...', 'Applying semantic resolution...'];
+      } else if (progress === 60) {
+        status = 'running_tests';
+        logs = ['Executing automated test suite...', 'Analyzing coverage reports...'];
+      } else if (progress === 100) {
+        status = 'completed';
+        logs = ['Merge successful!', 'Updating primary branch...'];
         clearInterval(interval);
-        handleFirestoreError(err, OperationType.UPDATE, `mergeJobs/${jobId}`);
+        
+        if (prId !== 'batch') {
+          setPrs(prev => prev.map(p => p.id === prId ? { ...p, status: 'merged' } : p));
+        }
       }
+
+      setQueue(prev => prev.map(job => {
+        if (job.id === jobId) {
+          return {
+            ...job,
+            progress,
+            status: status !== 'queued' ? status : job.status,
+            logs: [...job.logs, ...logs]
+          };
+        }
+        return job;
+      }));
     }, 2000);
   };
 
@@ -969,7 +804,7 @@ export default function App() {
                     {branches.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-8 py-12 text-center text-white/20 italic">
-                          No branches found in database
+                          No branches found
                         </td>
                       </tr>
                     )}
@@ -1179,12 +1014,7 @@ export default function App() {
                 branches={branches} 
                 onStartSync={(branchName) => {
                   // Simulate master update
-                  const masterBranch = branches.find(b => b.type === 'master');
-                  if (masterBranch) {
-                    updateDoc(doc(db, 'branches', masterBranch.id), {
-                      lastMergedAt: Date.now()
-                    });
-                  }
+                  setBranches(prev => prev.map(b => b.type === 'master' ? { ...b, lastMergedAt: Date.now() } : b));
                 }} 
               />
             </motion.div>
@@ -1202,57 +1032,12 @@ export default function App() {
           {activeTab === 'design' && <DesignDoc />}
         </AnimatePresence>
 
-        {error && <ErrorDisplay error={error} />}
-        
-        {user?.email === 'shengliang.song@gmail.com' && (
-          <div className="mt-12 pt-12 border-t border-white/5">
-            <button 
-              onClick={async () => {
-                try {
-                  // Seed Branches
-                  const branchCol = collection(db, 'branches');
-                  await addDoc(branchCol, { name: 'master', type: 'master' });
-                  await addDoc(branchCol, { name: 'project-alpha', type: 'project', teamId: 'team-1' });
-                  await addDoc(branchCol, { name: 'project-beta', type: 'project', teamId: 'team-2' });
-                  await addDoc(branchCol, { name: 'release-v1.0', type: 'release' });
-
-                  // Seed Teams
-                  const teamCol = collection(db, 'teams');
-                  await addDoc(teamCol, { name: 'Platform Team', engineers: ['Alice', 'Bob', 'Charlie'] });
-                  await addDoc(teamCol, { name: 'Product Team', engineers: ['David', 'Eve', 'Frank'] });
-
-                  // Seed PRs
-                  const prCol = collection(db, 'pullRequests');
-                  await addDoc(prCol, {
-                    title: 'feat: implement AI conflict resolution',
-                    author: 'Alice',
-                    authorUid: 'system',
-                    sourceBranch: 'feature/ai-resolver',
-                    targetBranch: 'project-alpha',
-                    status: 'open',
-                    createdAt: Date.now() - 3600000,
-                  });
-
-                  // Seed Merge Queues
-                  const mqCol = collection(db, 'mergeQueues');
-                  await addDoc(mqCol, {
-                    name: 'Main Release Cycle',
-                    targetBranch: 'master',
-                    strategy: 'binary_tree',
-                    batchSize: 8,
-                    leafBranches: ['project-alpha', 'project-beta', 'hotfix-auth', 'feature-ui'],
-                    isActive: true,
-                    createdAt: Date.now()
-                  });
-                  
-                  alert('Database seeded successfully!');
-                } catch (err) {
-                  handleFirestoreError(err, OperationType.WRITE, 'seed');
-                }
-              }}
-              className="text-[10px] font-bold text-white/20 uppercase tracking-widest hover:text-orange-500 transition-colors"
-            >
-              Seed Initial Data (Admin Only)
+        {error && (
+          <div className="fixed bottom-8 right-8 bg-rose-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50">
+            <AlertTriangle size={20} />
+            <p className="text-sm font-bold">{error}</p>
+            <button onClick={() => setError(null)} className="ml-4 hover:opacity-50">
+              <X size={18} />
             </button>
           </div>
         )}

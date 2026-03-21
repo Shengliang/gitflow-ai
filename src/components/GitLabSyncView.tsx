@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Rocket, ShieldCheck, Activity, CheckCircle2, AlertTriangle, ArrowRight, Loader2, GitMerge, Zap, Github, Globe, RefreshCw, Terminal, Check } from 'lucide-react';
-import { db, handleFirestoreError, OperationType } from '../firebase';
-import { collection, addDoc, updateDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 
 interface SyncCommit {
   id: string;
