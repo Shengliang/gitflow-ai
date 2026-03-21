@@ -27,50 +27,53 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpe
   ];
 
   return (
-    <div className="w-64 bg-[#151619] border-r border-white/10 flex flex-col h-screen sticky top-0">
-      <div className="p-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-indigo-600 rounded-lg flex items-center justify-center ring-1 ring-white/20">
-            <GitBranch className="text-white w-5 h-5" />
-          </div>
-          <h1 className="text-white font-black tracking-tighter italic uppercase">GitFlow AI</h1>
+    <div className="w-20 bg-[#151619] border-r border-white/10 flex flex-col h-screen sticky top-0 z-50">
+      <div className="p-4 border-b border-white/10 flex justify-center">
+        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-indigo-600 rounded-xl flex items-center justify-center ring-1 ring-white/20">
+          <GitBranch className="text-white w-6 h-6" />
         </div>
       </div>
       
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-none">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            title={item.label}
+            className={`w-full flex items-center justify-center p-3 rounded-xl transition-all relative group ${
               activeTab === item.id 
                 ? 'bg-white/10 text-white shadow-lg' 
-                : 'text-white/50 hover:bg-white/5 hover:text-white'
+                : 'text-white/30 hover:bg-white/5 hover:text-white'
             }`}
           >
-            <item.icon size={20} />
-            <span className="font-medium">{item.label}</span>
+            <item.icon size={22} />
+            {/* Tooltip */}
+            <div className="absolute left-full ml-2 px-2 py-1 bg-black border border-white/10 rounded-md text-[10px] font-bold text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+              {item.label}
+            </div>
           </button>
         ))}
         <div className="pt-4 mt-4 border-t border-white/5">
           <button
             onClick={onOpenCLI}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/50 hover:bg-white/5 hover:text-white transition-all"
+            title="Terminal CLI"
+            className="w-full flex items-center justify-center p-3 rounded-xl text-white/30 hover:bg-white/5 hover:text-white transition-all group relative"
           >
-            <Terminal size={20} />
-            <span className="font-medium">Terminal CLI</span>
+            <Terminal size={22} />
+            <div className="absolute left-full ml-2 px-2 py-1 bg-black border border-white/10 rounded-md text-[10px] font-bold text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+              Terminal CLI
+            </div>
           </button>
         </div>
       </nav>
       
-      <div className="p-4 border-t border-white/10">
-        <div className="bg-white/5 rounded-2xl p-4">
-          <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-2">Next Sync</p>
-          <p className="text-white font-mono text-sm">March 24, 2026</p>
-          <div className="mt-2 h-1 w-full bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full bg-orange-500 w-2/3"></div>
-          </div>
-        </div>
+      <div className="p-4 border-t border-white/10 flex justify-center">
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white/30 hover:text-white transition-colors"
+        >
+          <Settings size={20} />
+        </button>
       </div>
     </div>
   );

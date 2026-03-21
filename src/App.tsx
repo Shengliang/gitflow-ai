@@ -68,8 +68,6 @@ const ErrorDisplay = ({ error }: { error: string }) => {
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isCLIOpen, setIsCLIOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isAgentOpen, setIsAgentOpen] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -254,19 +252,9 @@ export default function App() {
     const handleTabChange = (e: any) => {
       setActiveTab(e.detail);
     };
-    const handleToggleAgent = (e: any) => {
-      setIsAgentOpen(e.detail);
-    };
-    const handleToggleSidebar = (e: any) => {
-      setIsSidebarOpen(e.detail);
-    };
     window.addEventListener('changeTab', handleTabChange);
-    window.addEventListener('toggleAgent', handleToggleAgent);
-    window.addEventListener('toggleSidebar', handleToggleSidebar);
     return () => {
       window.removeEventListener('changeTab', handleTabChange);
-      window.removeEventListener('toggleAgent', handleToggleAgent);
-      window.removeEventListener('toggleSidebar', handleToggleSidebar);
     };
   }, []);
 
@@ -657,65 +645,22 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#0A0B0D] text-white font-sans overflow-hidden">
-      {/* Left Sidebar - GitFlow AI Menu */}
-      <AnimatePresence mode="popLayout">
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ x: -300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -300, opacity: 0 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-            className="z-40"
-          >
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenCLI={() => setIsCLIOpen(true)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Left Rail - GitFlow AI Menu */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenCLI={() => setIsCLIOpen(true)} />
+
+      {/* Left Frame - GitLab Duo Agent */}
+      <div className="w-96 h-full border-r border-white/10 bg-[#151619] z-40 shrink-0 hidden lg:block">
+        <GitLabDoAgent />
+      </div>
 
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Toggle Buttons */}
-        <div className="absolute top-8 left-4 z-50 flex gap-2">
-          {!isSidebarOpen && (
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="p-2 bg-[#1C1D21] border border-white/5 rounded-xl text-white/40 hover:text-orange-500 transition-all shadow-xl"
-              title="Open Menu"
-            >
-              <PanelLeft size={20} />
-            </button>
-          )}
-        </div>
-
-        <div className="absolute top-8 right-4 z-50 flex gap-2">
-          {!isAgentOpen && (
-            <button 
-              onClick={() => setIsAgentOpen(true)}
-              className="p-2 bg-[#1C1D21] border border-white/5 rounded-xl text-white/40 hover:text-orange-500 transition-all shadow-xl"
-              title="Open Agent"
-            >
-              <MessageSquare size={20} />
-            </button>
-          )}
-        </div>
-
         <main className="flex-1 p-8 overflow-y-auto">
           <header className="flex justify-between items-center mb-12">
-            <div className="flex items-center gap-4">
-              {isSidebarOpen && (
-                <button 
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-orange-500 transition-all"
-                  title="Hide Menu"
-                >
-                  <PanelLeft size={18} />
-                </button>
-              )}
-              <div>
-                <h1 className="text-4xl font-bold tracking-tight mb-2">
-                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                </h1>
-                <p className="text-white/40">GitLab Hackathon 2026 • AI Productivity Track</p>
-              </div>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight mb-2">
+                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+              </h1>
+              <p className="text-white/40">GitLab Hackathon 2026 • AI Productivity Track</p>
             </div>
             
             <div className="flex gap-4">
@@ -749,18 +694,6 @@ export default function App() {
                 >
                   <LogOut size={18} />
                 </button>
-                {isAgentOpen && (
-                  <>
-                    <div className="h-8 w-px bg-white/10"></div>
-                    <button 
-                      onClick={() => setIsAgentOpen(false)}
-                      className="text-white/40 hover:text-orange-500 transition-colors"
-                      title="Hide Agent"
-                    >
-                      <PanelRight size={18} />
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           </header>
@@ -1324,21 +1257,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {/* Right Sidebar - GitLab Duo Agent */}
-      <AnimatePresence mode="popLayout">
-        {isAgentOpen && (
-          <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 300, opacity: 0 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-            className="w-64 h-full border-l border-white/10 bg-[#151619] z-40 shrink-0"
-          >
-            <GitLabDoAgent />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <CLIInterface 
         isOpen={isCLIOpen} 
