@@ -481,7 +481,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const APP_URL = "${appUrl}";
+const DEFAULT_APP_URL = "${appUrl}";
 const CONFIG_FILE = path.join(os.homedir(), '.git-ai-config.json');
 const args = process.argv.slice(2);
 const command = args[0];
@@ -503,8 +503,10 @@ function saveConfig(config) {
 
 async function apiRequest(path, method = 'GET', data = null) {
   const config = getConfig();
+  const baseUrl = config.APP_URL || DEFAULT_APP_URL;
+  
   return new Promise((resolve, reject) => {
-    const url = new URL(path, APP_URL);
+    const url = new URL(path, baseUrl);
     const client = url.protocol === 'https:' ? https : http;
     
     const options = {
@@ -554,11 +556,13 @@ async function run() {
     } else if (subCommand === 'list') {
       const config = getConfig();
       console.log('Current Configuration:');
+      console.log('  DEFAULT_APP_URL = ' + DEFAULT_APP_URL);
       Object.keys(config).forEach(k => {
         console.log('  ' + k + ' = ' + (k.includes('KEY') || k.includes('TOKEN') ? '********' : config[k]));
       });
     } else {
       console.log('Usage: git-ai config <set|get|list> [key] [value]');
+      console.log('Keys: GEMINI_API_KEY, GIT_TOKEN, APP_URL');
     }
   } else if (command === 'status') {
     console.log('📊 Fetching GitFlow AI Merge Queue Status...');

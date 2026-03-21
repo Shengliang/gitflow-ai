@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Terminal, Copy, Check, Download, ShieldCheck, Zap, GitBranch, GitPullRequest, RefreshCw, Activity } from 'lucide-react';
+import { Terminal, Copy, Check, Download, ShieldCheck, Zap, GitBranch, GitPullRequest, RefreshCw, Activity, Github } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const LocalCLITab: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const appUrl = window.location.origin;
+  const githubUrl = "https://github.com/Shengliang/gitflow-ai";
   const installCommand = `curl -sL ${appUrl}/install.sh | bash`;
 
   const handleCopy = () => {
@@ -81,22 +82,85 @@ export const LocalCLITab: React.FC = () => {
             Integrate the AI GitFlow directly into your daily terminal workflow. Our CLI wrapper intercepts standard Git commands to inject intelligent orchestration.
           </p>
 
-          <div className="space-y-4">
-            <p className="text-xs font-bold text-white/30 uppercase tracking-widest">One-Line Installation</p>
-            <div className="flex gap-4">
-              <div className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-6 py-4 font-mono text-sm text-emerald-400 flex items-center justify-between group">
-                <span className="truncate">{installCommand}</span>
+          <div className="space-y-6 mb-12">
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-white/30 uppercase tracking-widest">1. Configure API Keys</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-black/50 border border-white/10 rounded-2xl px-6 py-4 font-mono text-xs text-white/60 flex items-center justify-between group">
+                  <code className="truncate">git-ai config set GEMINI_API_KEY &lt;key&gt;</code>
+                  <button onClick={() => navigator.clipboard.writeText('git-ai config set GEMINI_API_KEY <your_gemini_key>')} className="text-white/20 hover:text-white transition-colors"><Copy size={14} /></button>
+                </div>
+                <div className="bg-black/50 border border-white/10 rounded-2xl px-6 py-4 font-mono text-xs text-white/60 flex items-center justify-between group">
+                  <code className="truncate">git-ai config set GIT_TOKEN &lt;token&gt;</code>
+                  <button onClick={() => navigator.clipboard.writeText('git-ai config set GIT_TOKEN <your_token>')} className="text-white/20 hover:text-white transition-colors"><Copy size={14} /></button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-white/30 uppercase tracking-widest">2. Install CLI Tool</p>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[300px] bg-black/50 border border-white/10 rounded-2xl px-6 py-4 font-mono text-sm text-emerald-400 flex items-center justify-between group">
+                  <span className="truncate">{installCommand}</span>
+                  <button 
+                    onClick={handleCopy}
+                    className="text-white/40 hover:text-white transition-colors p-2"
+                  >
+                    {copied ? <Check size={18} className="text-emerald-400" /> : <Copy size={18} />}
+                  </button>
+                </div>
+                <div className="flex gap-4">
+                  <a 
+                    href={`${githubUrl}/archive/refs/heads/main.zip`}
+                    className="bg-white/5 border border-white/10 text-white font-bold px-8 py-4 rounded-2xl hover:bg-white/10 transition-all flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <Download size={18} />
+                    Download SDK
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8 bg-black/30 rounded-[32px] border border-white/5 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-white/60 uppercase tracking-widest">Alternative: Install from Source</h4>
+                <p className="text-xs text-white/40">Download the standalone script directly from our open-source repositories.</p>
+              </div>
+              <a 
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white text-black font-bold px-6 py-3 rounded-xl hover:bg-orange-500 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap text-xs self-start md:self-center"
+              >
+                <Github size={14} />
+                GitHub Repo
+              </a>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Github size={14} className="text-white/40" />
+                <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">From GitHub</span>
+              </div>
+              <div className="bg-black/50 border border-white/5 rounded-xl px-4 py-3 font-mono text-[10px] text-white/60 flex items-center justify-between group">
+                <code className="truncate">curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai</code>
                 <button 
-                  onClick={handleCopy}
-                  className="text-white/40 hover:text-white transition-colors p-2"
+                  onClick={() => navigator.clipboard.writeText(`curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai`)}
+                  className="text-white/20 hover:text-white transition-colors ml-2"
                 >
-                  {copied ? <Check size={18} className="text-emerald-400" /> : <Copy size={18} />}
+                  <Copy size={14} />
                 </button>
               </div>
-              <button className="bg-white text-black font-bold px-8 rounded-2xl hover:bg-orange-500 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
-                <Download size={18} />
-                Download Script
-              </button>
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <p className="text-[10px] text-orange-500/60 font-medium">
+                Note: When installing from source, you must manually set your orchestrator URL:
+                <br />
+                <code className="text-white/40">git-ai config set APP_URL {appUrl}</code>
+              </p>
             </div>
           </div>
         </div>
