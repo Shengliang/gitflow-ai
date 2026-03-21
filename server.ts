@@ -482,6 +482,7 @@ const path = require('path');
 const os = require('os');
 
 const DEFAULT_APP_URL = "${appUrl}";
+const VERSION = "1.0.0";
 const CONFIG_FILE = path.join(os.homedir(), '.git-ai-config.json');
 const args = process.argv.slice(2);
 const command = args[0];
@@ -564,6 +565,8 @@ async function run() {
       console.log('Usage: git-ai config <set|get|list> [key] [value]');
       console.log('Keys: GEMINI_API_KEY, GIT_TOKEN, APP_URL');
     }
+  } else if (command === 'version' || command === '-v' || command === '--version') {
+    console.log('GitFlow AI CLI version ' + VERSION);
   } else if (command === 'status') {
     console.log('📊 Fetching GitFlow AI Merge Queue Status...');
     try {
@@ -615,6 +618,8 @@ async function run() {
   } else if (command === 'help' || !command) {
     console.log('\\n🚀 GitFlow AI CLI (git-ai) Help');
     console.log('================================');
+    console.log('Version: ' + VERSION);
+    console.log('Website: ' + DEFAULT_APP_URL);
     console.log('\\nUSAGE:');
     console.log('  git-ai <command> [options]');
     console.log('\\nCOMMANDS:');
@@ -624,6 +629,7 @@ async function run() {
     console.log('  status     Check global AI Merge Queue status');
     console.log('  benchmark  Run GitLab API integration benchmark');
     console.log('  config     Manage API keys and local configuration');
+    console.log('  version    Show CLI version');
     console.log('  help       Show this help message');
     console.log('\\nFALLBACK:');
     console.log('  Any other command will fall back to standard git.');
