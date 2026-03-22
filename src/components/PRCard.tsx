@@ -8,7 +8,7 @@ interface PRCardProps {
   pr: PullRequest;
   onMerge: (id: string) => void;
   isSelected?: boolean;
-  onSelect?: (id: string, selected: boolean) => void;
+  onSelect?: (id: string) => void;
 }
 
 export const PRCard: React.FC<PRCardProps> = ({ pr, onMerge, isSelected, onSelect }) => {
@@ -50,7 +50,7 @@ export const PRCard: React.FC<PRCardProps> = ({ pr, onMerge, isSelected, onSelec
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={(e) => onSelect(pr.id, e.target.checked)}
+            onChange={() => onSelect(pr.id)}
             className="w-4 h-4 rounded border-white/10 bg-white/5 text-orange-500 focus:ring-orange-500 focus:ring-offset-0"
           />
         </div>

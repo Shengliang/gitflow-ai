@@ -1,4 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import {
+  auth,
+  db,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit
+} from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, Sparkles, Send, Loader2, User, MessageSquare, ShieldAlert, GitPullRequest, Terminal, X, ChevronRight } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -52,12 +61,38 @@ export const GitLabDoAgent: React.FC = () => {
         }
       };
 
+      const syncGitLabRepo = {
+        name: "syncGitLabRepo",
+        parameters: {
+          type: Type.OBJECT,
+          description: "Synchronize commits from a GitHub repository to a GitLab repository.",
+          properties: {
+            githubRepo: { type: Type.STRING, description: "The source GitHub repository (e.g., 'Shengliang/gitflow-ai')" },
+            gitlabProjectId: { type: Type.STRING, description: "The target GitLab project ID or path." }
+          },
+          required: ["githubRepo", "gitlabProjectId"]
+        }
+      };
+
+      const createGitLabRepo = {
+        name: "createGitLabRepo",
+        parameters: {
+          type: Type.OBJECT,
+          description: "Create a new repository on GitLab.",
+          properties: {
+            name: { type: Type.STRING, description: "The name of the repository to create." },
+            description: { type: Type.STRING, description: "A brief description of the repository." }
+          },
+          required: ["name"]
+        }
+      };
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [{ role: 'user', parts: [{ text: userMessage }] }],
         config: {
-          systemInstruction: "You are GitLab Duo, an advanced AI agent integrated into the GitFlow AI orchestrator. You help developers with code reviews, merge request summaries, security analysis, and workflow automation. Keep your responses concise and professional. Use markdown for code snippets. You have access to real-time data via tools.",
-          tools: [{ functionDeclarations: [getMergeQueueStatus, getGitLabProjects] }]
+          systemInstruction: "You are GitLab Duo, an advanced AI agent integrated into the GitFlow AI orchestrator. You help developers with code reviews, merge request summaries, security analysis, and workflow automation. Keep your responses concise and professional. Use markdown for code snippets. You have access to real-time data via tools. If a user asks to sync or create a repo, use the appropriate tools.",
+          tools: [{ functionDeclarations: [getMergeQueueStatus, getGitLabProjects, syncGitLabRepo, createGitLabRepo] }]
         }
       });
 
@@ -66,11 +101,31 @@ export const GitLabDoAgent: React.FC = () => {
         const results = [];
         for (const call of functionCalls) {
           if (call.name === 'getMergeQueueStatus') {
-            const res = await fetch('/api/merge-queue/status');
-            results.push({ name: call.name, response: await res.json(), id: call.id });
+            try {
+              const q = query(collection(db, 'mergeQueue'), orderBy('createdAt', 'desc'), limit(10));
+              const snapshot = await getDocs(q);
+              const queueData = snapshot.docs.map(doc => doc.data());
+              results.push({ name: call.name, response: { jobs: queueData } });
+            } catch (err) {
+              results.push({ name: call.name, response: { error: "Failed to fetch merge queue from Firestore." } });
+            }
           } else if (call.name === 'getGitLabProjects') {
             const res = await fetch('/api/gitlab/projects');
-            results.push({ name: call.name, response: await res.json(), id: call.id });
+            results.push({ name: call.name, response: await res.json() });
+          } else if (call.name === 'syncGitLabRepo') {
+            const res = await fetch('/api/gitlab/repo/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(call.args)
+            });
+            results.push({ name: call.name, response: await res.json() });
+          } else if (call.name === 'createGitLabRepo') {
+            const res = await fetch('/api/gitlab/repo/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(call.args)
+            });
+            results.push({ name: call.name, response: await res.json() });
           }
         }
 
@@ -79,8 +134,11 @@ export const GitLabDoAgent: React.FC = () => {
           contents: [
             { role: 'user', parts: [{ text: userMessage }] },
             { role: 'assistant', parts: response.candidates[0].content.parts },
-            { role: 'user', parts: results.map(r => ({ functionResponse: r })) }
-          ]
+            { role: 'user', parts: results.map(r => ({ functionResponse: { name: r.name, response: r.response } })) }
+          ],
+          config: {
+            systemInstruction: "You are GitLab Duo. You have just executed some tools. Summarize the results for the user. If a repo was created or synced, provide the details.",
+          }
         });
         setMessages(prev => [...prev, { role: 'assistant', content: finalResponse.text || "I've processed that request." }]);
       } else {

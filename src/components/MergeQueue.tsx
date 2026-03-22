@@ -1,13 +1,14 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bot, Cpu, Loader2, Terminal, Zap } from 'lucide-react';
+import { Bot, Cpu, Loader2, Terminal, Zap, Trash2 } from 'lucide-react';
 import { MergeJob } from '../types';
 
 interface MergeQueueProps {
   jobs: MergeJob[];
+  onDelete?: (jobId: string) => void;
 }
 
-export const MergeQueue: React.FC<MergeQueueProps> = ({ jobs }) => {
+export const MergeQueue: React.FC<MergeQueueProps> = ({ jobs, onDelete }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
@@ -60,13 +61,24 @@ export const MergeQueue: React.FC<MergeQueueProps> = ({ jobs }) => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {job.status !== 'completed' && job.status !== 'failed' && (
-                    <Loader2 className="text-orange-500 animate-spin" size={16} />
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {job.status !== 'completed' && job.status !== 'failed' && (
+                      <Loader2 className="text-orange-500 animate-spin" size={16} />
+                    )}
+                    <span className="text-xs font-bold text-white/60 uppercase tracking-widest">
+                      {job.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(job.id)}
+                      className="p-2 text-white/20 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                      title="Remove from queue"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   )}
-                  <span className="text-xs font-bold text-white/60 uppercase tracking-widest">
-                    {job.status.replace('_', ' ')}
-                  </span>
                 </div>
               </div>
 

@@ -19,10 +19,28 @@ export const GitLabSyncView: React.FC = () => {
   const [syncProgress, setSyncProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [tokenMissing, setTokenMissing] = useState(false);
+
+  useEffect(() => {
+    // Check if token is likely missing by calling projects API
+    const checkToken = async () => {
+      try {
+        const res = await fetch('/api/gitlab/projects');
+        const data = await res.json();
+        if (res.status === 400 && data.error?.includes('TOKEN')) {
+          setTokenMissing(true);
+        }
+      } catch (e) {
+        // Ignore
+      }
+    };
+    checkToken();
+  }, []);
 
   const createRepo = async () => {
     setIsCreating(true);
     setError(null);
+    setLogs(prev => [...prev, '🔍 Checking GitLab for existing repository...']);
     try {
       const response = await fetch('/api/gitlab/repo/create', {
         method: 'POST',
@@ -39,10 +57,12 @@ export const GitLabSyncView: React.FC = () => {
           setLogs(prev => [...prev, `✅ GitLab repository "gitflow-ai" created successfully. ID: ${data.project.id}`]);
         }
       } else {
-        setError(data.error || 'Failed to create repository.');
+        const errMsg = data.error || 'Failed to create repository.';
+        setError(errMsg);
+        if (errMsg.includes('TOKEN')) setTokenMissing(true);
       }
     } catch (err: any) {
-      setError('Network error while creating repository.');
+      setError('Network error while creating repository. Please ensure the server is running.');
     } finally {
       setIsCreating(false);
     }
@@ -95,11 +115,49 @@ export const GitLabSyncView: React.FC = () => {
             <p className="text-white/40 text-sm">Cherry-pick and synchronize commits across platforms</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <ShieldCheck size={16} className="text-emerald-500" />
-          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">GitFlow AI Active</span>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+            <ShieldCheck size={16} className="text-emerald-500" />
+            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">GitFlow AI Active</span>
+          </div>
+          {tokenMissing && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-lg">
+              <AlertTriangle size={12} className="text-rose-500" />
+              <span className="text-[8px] font-bold text-rose-500 uppercase tracking-widest">GITLAB_TOKEN Missing</span>
+            </div>
+          )}
         </div>
       </div>
+
+      {tokenMissing && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-500/10 border border-rose-500/20 rounded-[32px] p-8 flex items-start gap-6"
+        >
+          <div className="w-12 h-12 bg-rose-500/20 rounded-2xl flex items-center justify-center shrink-0">
+            <AlertTriangle className="text-rose-500" size={24} />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-bold text-white">GitLab Integration Required</h3>
+            <p className="text-sm text-white/60 leading-relaxed">
+              To use the Sync Orchestrator, you must configure a <span className="text-white font-bold">GITLAB_TOKEN</span> in your environment variables. 
+              This token needs <span className="font-mono text-orange-500">api</span> scope to create repositories and sync commits.
+            </p>
+            <div className="pt-2 flex gap-4">
+              <a 
+                href="https://gitlab.com/-/profile/personal_access_tokens" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1"
+              >
+                Create Token <ArrowRight size={12} />
+              </a>
+              <p className="text-[10px] text-white/30 italic">Add to .env or Settings menu</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
