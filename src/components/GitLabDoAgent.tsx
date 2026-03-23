@@ -1,13 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  auth,
-  db,
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  limit
-} from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, Sparkles, Send, Loader2, User, MessageSquare, ShieldAlert, GitPullRequest, Terminal, X, ChevronRight } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -102,12 +93,10 @@ export const GitLabDoAgent: React.FC = () => {
         for (const call of functionCalls) {
           if (call.name === 'getMergeQueueStatus') {
             try {
-              const q = query(collection(db, 'mergeQueue'), orderBy('createdAt', 'desc'), limit(10));
-              const snapshot = await getDocs(q);
-              const queueData = snapshot.docs.map(doc => doc.data());
-              results.push({ name: call.name, response: { jobs: queueData } });
+              const res = await fetch('/api/merge-queue/status');
+              results.push({ name: call.name, response: await res.json() });
             } catch (err) {
-              results.push({ name: call.name, response: { error: "Failed to fetch merge queue from Firestore." } });
+              results.push({ name: call.name, response: { error: "Failed to fetch merge queue status." } });
             }
           } else if (call.name === 'getGitLabProjects') {
             const res = await fetch('/api/gitlab/projects');

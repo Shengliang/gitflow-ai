@@ -20,29 +20,16 @@ import { ProjectInfo } from './components/ProjectInfo';
 import { DesignDoc } from './components/DesignDoc';
 import { CLIInterface } from './components/CLIInterface';
 import { LocalCLITab } from './components/LocalCLITab';
-import { 
-  auth, 
-  db, 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  googleProvider, 
-  collection, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  setDoc, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  addDoc,
-  getDoc,
-  OperationType,
-  handleFirestoreError
-} from './firebase';
-import { User } from 'firebase/auth';
 import { Branch, PullRequest, MergeJob, Team, MergeQueue as MergeQueueType } from './types';
 import { GitPullRequest, Users, GitBranch, GitMerge, Zap, Activity, ShieldCheck, LogIn, LogOut, AlertTriangle, RefreshCw, Plus, Trash2, ChevronRight, ListOrdered, Settings2, Github, Globe, PanelLeft, PanelRight, MessageSquare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+interface User {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -96,59 +83,60 @@ export default function App() {
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAuthReady(true);
-    });
-    return () => unsubscribe();
+    // Mock auth readiness
+    const savedUser = localStorage.getItem('gitflow_user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setIsAuthReady(true);
   }, []);
 
-  // Real-time sync for branches
+  // Polling for branches
   useEffect(() => {
     if (!user) {
       setBranches([]);
       return;
     }
 
-    const q = query(collection(db, 'branches'), orderBy('name'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const branchList = snapshot.docs.map(doc => doc.data() as Branch);
-      if (branchList.length === 0) {
-        // Seed initial branches if empty
-        const initialBranches: Branch[] = [
-          { id: '1', name: 'master', type: 'master', lastCommit: 'Initial commit', status: 'stable' },
-          { id: '2', name: 'feature/ai-orchestrator', type: 'project', lastCommit: 'Add Gemini integration', status: 'active' },
-          { id: '3', name: 'fix/merge-conflicts', type: 'project', lastCommit: 'Resolve binary tree issues', status: 'active' }
-        ];
-        initialBranches.forEach(b => {
-          setDoc(doc(db, 'branches', b.id), b).catch(err => handleFirestoreError(err, OperationType.WRITE, 'branches'));
-        });
-      } else {
-        setBranches(branchList);
+    const fetchBranches = async () => {
+      try {
+        const res = await fetch('/api/branches');
+        if (res.ok) {
+          const data = await res.json();
+          setBranches(data);
+        }
+      } catch (err) {
+        console.error('Error fetching branches:', err);
       }
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'branches');
-    });
+    };
 
-    return () => unsubscribe();
+    fetchBranches();
+    const interval = setInterval(fetchBranches, 10000);
+    return () => clearInterval(interval);
   }, [user]);
 
-  // Real-time sync for merge queue
+  // Polling for merge queue
   useEffect(() => {
     if (!user) {
       setQueue([]);
       return;
     }
 
-    const q = query(collection(db, 'mergeQueue'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const jobList = snapshot.docs.map(doc => doc.data() as MergeJob);
-      setQueue(jobList);
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'mergeQueue');
-    });
+    const fetchQueue = async () => {
+      try {
+        const res = await fetch('/api/merge-queue');
+        if (res.ok) {
+          const data = await res.json();
+          setQueue(data);
+        }
+      } catch (err) {
+        console.error('Error fetching merge queue:', err);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchQueue();
+    const interval = setInterval(fetchQueue, 5000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
@@ -219,19 +207,21 @@ export default function App() {
 
   const handleLogin = async (providerType: 'google' | 'github' | 'gitlab' = 'google') => {
     setLoginError(null);
-    try {
-      if (providerType === 'google') {
-        await signInWithPopup(auth, googleProvider);
-      } else {
-        // Other providers not implemented in this demo
-        setLoginError(`${providerType} login is not configured. Please use Google Login.`);
-      }
-    } catch (err: any) {
-      setLoginError(err.message);
-    }
+    // Mock login for demo
+    const mockUser = {
+      uid: 'user-' + Math.random().toString(36).substring(7),
+      displayName: 'Shengliang Song',
+      email: 'shengliang.song@gmail.com',
+      photoURL: 'https://picsum.photos/seed/sheng/100/100'
+    };
+    setUser(mockUser);
+    localStorage.setItem('gitflow_user', JSON.stringify(mockUser));
   };
 
-  const handleLogout = () => auth.signOut();
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('gitflow_user');
+  };
 
   const createMergeQueue = () => {
     const newQueue: MergeQueueType = {
@@ -263,23 +253,19 @@ export default function App() {
     // Update PR status
     setPrs(prev => prev.map(p => p.id === prId ? { ...p, status: 'merging' } : p));
 
-    // Create a new merge job in Firestore
-    const jobId = `job-${Date.now()}`;
-    const jobData: MergeJob = {
-      id: jobId,
-      prId: prId,
-      status: 'queued',
-      progress: 0,
-      logs: ['Initializing AI merge orchestrator...', 'Fetching branch metadata...'],
-      createdAt: Date.now()
-    };
-
     try {
-      await setDoc(doc(db, 'mergeQueue', jobId), jobData);
-      // Simulate the merge process
-      simulateMergeProcess(jobId, prId);
+      const res = await fetch('/api/merge-queue/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branch: pr.branch, author: user.displayName })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Simulate the merge process
+        simulateMergeProcess(data.queueId, prId);
+      }
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeQueue');
+      console.error('Error registering merge job:', err);
     }
   };
 
@@ -291,44 +277,34 @@ export default function App() {
     // Update all PR statuses
     setPrs(prev => prev.map(p => selectedPrIds.includes(p.id) ? { ...p, status: 'merging' } : p));
 
-    // Create a single batch merge job in Firestore
-    const jobId = `job-batch-${Date.now()}`;
-    const jobData: MergeJob = {
-      id: jobId,
-      prId: 'batch',
-      status: 'queued',
-      progress: 0,
-      logs: [
-        `Initializing Atomic Batch Merge: ${batchName}`,
-        `Priority: ${selectedPrIds.length > 3 ? 'high' : 'standard'}`,
-        `Grouping ${selectedPrIds.length} PRs for parallel validation...`,
-        ...selectedPrIds.map(id => ` - Included PR: ${prs.find(p => p.id === id)?.title || id}`)
-      ],
-      isBatch: true,
-      batchPrIds: selectedPrIds,
-      batchName: batchName,
-      priority: selectedPrIds.length > 3 ? 'high' : 'standard',
-      createdAt: Date.now()
-    };
-
     try {
-      await setDoc(doc(db, 'mergeQueue', jobId), jobData);
-      // Clear selection
-      const currentSelected = [...selectedPrIds];
-      setSelectedPrIds([]);
-
-      // Simulate batch merge
-      simulateBatchMergeProcess(jobId, currentSelected);
+      const res = await fetch('/api/merge-queue/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          branch: `batch-${Date.now()}`, 
+          author: user.displayName,
+          isBatch: true,
+          batchName,
+          batchPrIds: selectedPrIds
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const currentSelected = [...selectedPrIds];
+        setSelectedPrIds([]);
+        simulateBatchMergeProcess(data.queueId, currentSelected);
+      }
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeQueue');
+      console.error('Error registering batch merge job:', err);
     }
   };
 
   const handleDeleteJob = async (jobId: string) => {
     try {
-      await deleteDoc(doc(db, 'mergeQueue', jobId));
+      await fetch(`/api/merge-queue/${jobId}`, { method: 'DELETE' });
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `mergeQueue/${jobId}`);
+      console.error('Error deleting job:', err);
     }
   };
 
@@ -358,16 +334,18 @@ export default function App() {
       }
 
       try {
-        const jobRef = doc(db, 'mergeQueue', jobId);
-        const jobDoc = await getDoc(jobRef);
-        if (jobDoc.exists()) {
-          const currentLogs = jobDoc.data().logs || [];
-          await updateDoc(jobRef, {
-            progress,
-            status: status !== 'queued' ? status : jobDoc.data().status,
-            logs: [...currentLogs, ...logs]
-          });
-        }
+        await fetch('/api/merge-queue/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            updates: {
+              progress,
+              status,
+              logs: logs.length > 0 ? logs : undefined // In real app we'd append
+            }
+          })
+        });
       } catch (err) {
         console.error('Error updating batch job:', err);
         clearInterval(interval);
@@ -380,35 +358,26 @@ export default function App() {
     const q = mergeQueues.find(mq => mq.id === queueId);
     if (!q || q.leafBranches.length === 0) return;
 
-    const jobId = `job-cycle-${Date.now()}`;
-    const jobData: MergeJob = {
-      id: jobId,
-      queueId: queueId,
-      status: 'queued',
-      progress: 0,
-      logs: [
-        `Initializing Binary Tree Merge Cycle for ${q.name}...`,
-        `Target Branch: ${q.targetBranch}`,
-        `Strategy: ${q.strategy}`,
-        `Leaf Branches: ${q.leafBranches.join(', ')}`,
-        `Priority: ${q.priority || 'standard'}`,
-        'Building merge tree structure...'
-      ],
-      isBatch: true,
-      batchName: `Cycle: ${q.name}`,
-      priority: q.priority || 'standard',
-      createdAt: Date.now()
-    };
-
     try {
-      await setDoc(doc(db, 'mergeQueue', jobId), jobData);
-      if (q.strategy === 'binary_tree') {
-        simulateBinaryTreeMerge(jobId, q.leafBranches, q.targetBranch);
-      } else {
-        simulateMergeProcess(jobId, 'batch');
+      const res = await fetch('/api/merge-queue/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          branch: `cycle-${queueId}`, 
+          author: user.displayName,
+          queueId
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (q.strategy === 'binary_tree') {
+          simulateBinaryTreeMerge(data.queueId, q.leafBranches, q.targetBranch);
+        } else {
+          simulateMergeProcess(data.queueId, 'batch');
+        }
       }
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'mergeQueue');
+      console.error('Error starting merge cycle:', err);
     }
   };
 
@@ -443,16 +412,18 @@ export default function App() {
       }
 
       try {
-        const jobRef = doc(db, 'mergeQueue', jobId);
-        const jobDoc = await getDoc(jobRef);
-        if (jobDoc.exists()) {
-          const currentLogs = jobDoc.data().logs || [];
-          await updateDoc(jobRef, {
-            progress,
-            status: status !== 'queued' ? status : jobDoc.data().status,
-            logs: [...currentLogs, ...logs]
-          });
-        }
+        await fetch('/api/merge-queue/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            updates: {
+              progress,
+              status,
+              logs: logs.length > 0 ? logs : undefined
+            }
+          })
+        });
       } catch (err) {
         console.error('Error updating binary tree job:', err);
         clearInterval(interval);
@@ -496,16 +467,18 @@ export default function App() {
       }
 
       try {
-        const jobRef = doc(db, 'mergeQueue', jobId);
-        const jobDoc = await getDoc(jobRef);
-        if (jobDoc.exists()) {
-          const currentLogs = jobDoc.data().logs || [];
-          await updateDoc(jobRef, {
-            progress,
-            status: status !== 'queued' ? status : jobDoc.data().status,
-            logs: [...currentLogs, ...logs]
-          });
-        }
+        await fetch('/api/merge-queue/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId,
+            updates: {
+              progress,
+              status,
+              logs: logs.length > 0 ? logs : undefined
+            }
+          })
+        });
       } catch (err) {
         console.error('Error updating merge job:', err);
         clearInterval(interval);

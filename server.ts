@@ -3,27 +3,159 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { Octokit } from "octokit";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
+const GITHUB_REPO = process.env.GITHUB_REPO || "gitflow-queue";
+const GITHUB_AUDIT_REPO = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
+
+async function getFileContent(owner: string, repo: string, path: string) {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+    });
+    if ("content" in data) {
+      const content = Buffer.from(data.content, "base64").toString("utf-8");
+      return { content: JSON.parse(content), sha: data.sha };
+    }
+  } catch (error: any) {
+    if (error.status === 404) {
+      return { content: null, sha: null };
+    }
+    throw error;
+  }
+  return { content: null, sha: null };
+}
+
+async function updateFileContent(owner: string, repo: string, path: string, content: any, sha: string | null) {
+  const message = `Update ${path} state`;
+  const contentBase64 = Buffer.from(JSON.stringify(content, null, 2)).toString("base64");
+  
+  await octokit.rest.repos.createOrUpdateFileContents({
+    owner,
+    repo,
+    path,
+    message,
+    content: contentBase64,
+    sha: sha || undefined,
+  });
+}
+
+async function logAudit(action: string, details: any) {
+  if (!GITHUB_OWNER || !GITHUB_AUDIT_REPO) return;
+  
+  const timestamp = new Date().toISOString();
+  const fileName = `audit-${timestamp.split('T')[0]}.json`;
+  const path = `logs/${fileName}`;
+  
+  try {
+    const { content, sha } = await getFileContent(GITHUB_OWNER, GITHUB_AUDIT_REPO, path);
+    const logs = content || [];
+    logs.push({ timestamp, action, details });
+    await updateFileContent(GITHUB_OWNER, GITHUB_AUDIT_REPO, path, logs, sha);
+  } catch (error) {
+    console.error("Failed to log audit to GitHub:", error);
+  }
+}
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // In-memory state for "real" functionality
-  const mergeQueue: any[] = [
-    { id: 'job-1', branch: 'feature/auth-refactor', author: 'Shengliang', status: 'running_tests', progress: 65, createdAt: Date.now() - 300000 },
-    { id: 'job-2', branch: 'fix/ui-bugs', author: 'Dev', status: 'queued', progress: 0, createdAt: Date.now() - 60000 },
-    { id: 'job-3', branch: 'feat/ai-summarizer', author: 'GitLabDuo', status: 'queued', progress: 0, createdAt: Date.now() }
+  // Initial state if GitHub is not configured
+  let mergeQueue: any[] = [];
+  let branches: any[] = [
+    { id: '1', name: 'master', type: 'master', lastCommit: 'Initial commit', status: 'stable' },
+    { id: '2', name: 'feature/ai-orchestrator', type: 'project', lastCommit: 'Add Gemini integration', status: 'active' },
+    { id: '3', name: 'fix/merge-conflicts', type: 'project', lastCommit: 'Resolve binary tree issues', status: 'active' }
   ];
-
-  const atomicBatches: any[] = [];
 
   app.use(express.json());
 
+  // Helper to sync with GitHub
+  const syncQueueWithGitHub = async () => {
+    if (!GITHUB_OWNER || !GITHUB_REPO || !process.env.GITHUB_TOKEN) return;
+    try {
+      const { content, sha } = await getFileContent(GITHUB_OWNER, GITHUB_REPO, "queue.json");
+      if (content) {
+        mergeQueue = content;
+      }
+    } catch (error) {
+      console.error("Failed to sync queue from GitHub:", error);
+    }
+  };
+
+  const saveQueueToGitHub = async () => {
+    if (!GITHUB_OWNER || !GITHUB_REPO || !process.env.GITHUB_TOKEN) return;
+    try {
+      const { sha } = await getFileContent(GITHUB_OWNER, GITHUB_REPO, "queue.json");
+      await updateFileContent(GITHUB_OWNER, GITHUB_REPO, "queue.json", mergeQueue, sha);
+    } catch (error) {
+      console.error("Failed to save queue to GitHub:", error);
+    }
+  };
+
+  const syncBranchesWithGitHub = async () => {
+    if (!GITHUB_OWNER || !GITHUB_REPO || !process.env.GITHUB_TOKEN) return;
+    try {
+      const { content, sha } = await getFileContent(GITHUB_OWNER, GITHUB_REPO, "branches.json");
+      if (content) {
+        branches = content;
+      }
+    } catch (error) {
+      console.error("Failed to sync branches from GitHub:", error);
+    }
+  };
+
+  const saveBranchesToGitHub = async () => {
+    if (!GITHUB_OWNER || !GITHUB_REPO || !process.env.GITHUB_TOKEN) return;
+    try {
+      const { sha } = await getFileContent(GITHUB_OWNER, GITHUB_REPO, "branches.json");
+      await updateFileContent(GITHUB_OWNER, GITHUB_REPO, "branches.json", branches, sha);
+    } catch (error) {
+      console.error("Failed to save branches to GitHub:", error);
+    }
+  };
+
+  // Initial sync
+  await syncQueueWithGitHub();
+  await syncBranchesWithGitHub();
+
   // API Routes
-  app.get("/api/merge-queue/status", (req, res) => {
+  app.get("/api/merge-queue", async (req, res) => {
+    await syncQueueWithGitHub();
+    res.json(mergeQueue);
+  });
+
+  app.get("/api/branches", async (req, res) => {
+    await syncBranchesWithGitHub();
+    res.json(branches);
+  });
+
+  app.post("/api/branches", async (req, res) => {
+    const branch = req.body;
+    const index = branches.findIndex(b => b.id === branch.id);
+    if (index !== -1) {
+      branches[index] = branch;
+    } else {
+      branches.push(branch);
+    }
+    await saveBranchesToGitHub();
+    await logAudit("branch_update", branch);
+    res.json({ success: true });
+  });
+
+  app.get("/api/merge-queue/status", async (req, res) => {
+    await syncQueueWithGitHub();
     const activeJob = mergeQueue.find(j => j.status === 'running_tests' || j.status === 'merging');
     const queuedJobs = mergeQueue.filter(j => j.status === 'queued');
     
@@ -35,7 +167,7 @@ async function startServer() {
     });
   });
 
-  app.post("/api/merge-queue/register", (req, res) => {
+  app.post("/api/merge-queue/register", async (req, res) => {
     const { branch, author } = req.body;
     const newJob = {
       id: `job-${Math.random().toString(36).substring(7)}`,
@@ -43,17 +175,44 @@ async function startServer() {
       author: author || 'anonymous',
       status: 'queued',
       progress: 0,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      logs: ['Initializing AI merge orchestrator...', 'Fetching branch metadata...']
     };
     
     mergeQueue.push(newJob);
-    console.log(`Registering branch ${branch} by ${author} to merge queue`);
+    await saveQueueToGitHub();
+    await logAudit("queue_register", newJob);
     
     res.json({
       success: true,
       message: `Branch ${branch} registered successfully. Position: ${mergeQueue.length}`,
       queueId: newJob.id
     });
+  });
+
+  app.post("/api/merge-queue/update", async (req, res) => {
+    const { jobId, updates } = req.body;
+    const index = mergeQueue.findIndex(j => j.id === jobId);
+    if (index !== -1) {
+      mergeQueue[index] = { ...mergeQueue[index], ...updates };
+      await saveQueueToGitHub();
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Job not found" });
+    }
+  });
+
+  app.delete("/api/merge-queue/:jobId", async (req, res) => {
+    const { jobId } = req.params;
+    const initialLength = mergeQueue.length;
+    mergeQueue = mergeQueue.filter(j => j.id !== jobId);
+    if (mergeQueue.length < initialLength) {
+      await saveQueueToGitHub();
+      await logAudit("queue_delete", { jobId });
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: "Job not found" });
+    }
   });
 
   app.post("/api/merge-queue/batch", (req, res) => {
@@ -65,7 +224,6 @@ async function startServer() {
       createdAt: Date.now()
     };
     
-    atomicBatches.push(newBatch);
     console.log(`Creating atomic batch "${batchName}" with PRs: ${prIds.join(', ')}`);
     
     res.json({
