@@ -67,7 +67,7 @@ const ArchitectureSVG = () => (
     
     {/* Feedback loop */}
     <path d="M 525 450 Q 525 480 310 480 Q 310 300 310 300" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" markerEnd="url(#arrowhead)" />
-    <text x="417" y="475" textAnchor="middle" fill="#94a3b8" fontSize="10">Real-time Sync (Firestore)</text>
+    <text x="417" y="475" textAnchor="middle" fill="#94a3b8" fontSize="10">Real-time Sync (GitHub API)</text>
   </svg>
 );
 
@@ -149,8 +149,8 @@ const MermaidDiagram = () => (
   F -->|Success| G[Merge to Master]
   F -->|Failure| H[AI Diagnostics]
   H -->|Notification| A
-  C -->|Sync State| FB[(Firebase Firestore)]
-  FB -->|Real-time Updates| B`}
+  C -->|Sync State| GH[(GitHub Repo)]
+  GH -->|State Persistence| B`}
   </pre>
 );
 

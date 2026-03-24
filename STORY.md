@@ -12,7 +12,7 @@ GitFlow AI is built on a high-fidelity stack designed for real-time feedback:
 
 1.  **The Brain (Gemini 3.1 Pro):** We used Gemini not just for text, but as a semantic engine. When a conflict occurs, we feed the "Before," "After," and "Target" states into the model to determine the developer's intent.
 2.  **The Voice (Gemini Multimodal Live API):** To make the demo truly immersive, we integrated the Live API to provide a real-time, low-latency audio presentation of the system architecture.
-3.  **The State (Firebase):** We used Firestore to manage the "Merge Queue" in real-time. As AI resolves conflicts or CI tests pass/fail, the dashboard updates instantly for all stakeholders.
+3.  **The State (GitHub API):** We used a GitHub repository to manage the "Merge Queue" in real-time. As AI resolves conflicts or CI tests pass/fail, the dashboard updates via polling the GitHub-backed state for all stakeholders.
 4.  **The UI (React & Tailwind):** We adopted a "Brutalist Tech" aesthetic to reflect the precision and power of the underlying engine.
 
 ## The Math of Merging

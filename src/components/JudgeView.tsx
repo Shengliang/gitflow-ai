@@ -70,7 +70,7 @@ export const JudgeView: React.FC = () => {
           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Visual Overview</p>
         </div>
         <p className="text-white/60 text-sm leading-relaxed">
-          The system architecture is designed for high availability and real-time synchronization. It leverages a React-based frontend, a Firebase backend for state management, and a Gemini-powered AI orchestrator that interacts directly with the GitLab API.
+          The system architecture is designed for high availability and real-time synchronization. It leverages a React-based frontend, a GitHub-backed persistence layer for state management, and a Gemini-powered AI orchestrator that interacts directly with the GitLab API.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
@@ -177,7 +177,7 @@ export const JudgeView: React.FC = () => {
               </li>
               <li className="flex gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                <span>**Real-time Visibility**: A high-fidelity dashboard (built with React & Firebase) provides stakeholders with a "Mission Control" view of the entire organization's health.</span>
+                <span>**Real-time Visibility**: A high-fidelity dashboard (built with React & GitHub API) provides stakeholders with a "Mission Control" view of the entire organization's health.</span>
               </li>
             </ul>
           </div>
@@ -189,7 +189,7 @@ export const JudgeView: React.FC = () => {
         <div className="flex justify-center gap-4">
           <div className="px-4 py-2 bg-white/5 rounded-xl text-[10px] font-bold text-white/40 uppercase tracking-widest">TypeScript</div>
           <div className="px-4 py-2 bg-white/5 rounded-xl text-[10px] font-bold text-white/40 uppercase tracking-widest">Gemini AI</div>
-          <div className="px-4 py-2 bg-white/5 rounded-xl text-[10px] font-bold text-white/40 uppercase tracking-widest">Firebase</div>
+          <div className="px-4 py-2 bg-white/5 rounded-xl text-[10px] font-bold text-white/40 uppercase tracking-widest">GitHub API</div>
           <div className="px-4 py-2 bg-white/5 rounded-xl text-[10px] font-bold text-white/40 uppercase tracking-widest">Vite</div>
         </div>
       </section>

@@ -44,8 +44,8 @@ const tasks: Task[] = [
   },
   {
     id: '3',
-    title: 'Firebase Real-time Sync',
-    description: 'Setup Firestore listeners for branches, PRs, and merge jobs to ensure UI consistency.',
+    title: 'GitHub State Persistence',
+    description: 'Implement GitHub repository-backed storage for branches, PRs, and merge jobs to ensure data persistence.',
     status: 'completed',
     category: 'Infrastructure',
     priority: 'High'
@@ -220,7 +220,7 @@ export const RoadmapView: React.FC = () => {
               Security Hardening
             </h4>
             <p className="text-sm text-white/40 leading-relaxed">
-              Finalize and stress-test the Firestore Security Rules. Implement "Devil's Advocate" attack vectors to ensure zero unauthorized data access.
+              Finalize and stress-test the GitHub API access controls. Implement "Devil's Advocate" attack vectors to ensure zero unauthorized data access.
             </p>
           </div>
           <div className="space-y-4">

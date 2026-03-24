@@ -215,7 +215,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/merge-queue/batch", (req, res) => {
+  app.post("/api/merge-queue/batch", async (req, res) => {
     const { prIds, batchName } = req.body;
     const newBatch = {
       id: `batch-${Math.random().toString(36).substring(7)}`,
@@ -225,6 +225,7 @@ async function startServer() {
     };
     
     console.log(`Creating atomic batch "${batchName}" with PRs: ${prIds.join(', ')}`);
+    await logAudit("batch_create", newBatch);
     
     res.json({
       success: true,
@@ -288,6 +289,7 @@ async function startServer() {
         message: "GitLab repository created successfully.",
         project: data
       });
+      await logAudit("gitlab_repo_create", { repoName, project: data });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -331,6 +333,7 @@ async function startServer() {
         message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab.`,
         commits: syncedCommits
       });
+      await logAudit("gitlab_repo_sync", { githubRepo, gitlabProjectId, commitCount: syncedCommits.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

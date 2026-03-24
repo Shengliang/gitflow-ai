@@ -31,10 +31,10 @@ const ArchitectureDiagram = () => (
       <text x="400" y="75" textAnchor="middle" fill="#c7d2fe" fontSize="12" fontWeight="bold">Gemini 3.1 Pro</text>
       <text x="400" y="90" textAnchor="middle" fill="#818cf8" fontSize="10">Semantic Engine</text>
 
-      {/* Firebase */}
+      {/* GitHub Repo */}
       <rect x="330" y="280" width="140" height="60" rx="12" fill="#1c1917" stroke="#f59e0b" strokeWidth="2" />
-      <text x="400" y="315" textAnchor="middle" fill="#fbbf24" fontSize="12" fontWeight="bold">Firestore</text>
-      <text x="400" y="330" textAnchor="middle" fill="#f59e0b" fontSize="10">Real-time State</text>
+      <text x="400" y="315" textAnchor="middle" fill="#fbbf24" fontSize="12" fontWeight="bold">GitHub Repo</text>
+      <text x="400" y="330" textAnchor="middle" fill="#f59e0b" fontSize="10">State Persistence</text>
 
       {/* React Dashboard */}
       <rect x="610" y="160" width="140" height="60" rx="12" fill="#0c0a09" stroke="#10b981" strokeWidth="2" />
@@ -314,7 +314,7 @@ export const DesignDoc: React.FC = () => {
                     Persistence Layer
                   </h3>
                   <p className="text-sm text-zinc-500 leading-relaxed">
-                    Firebase Firestore acts as the global state coordinator. It stores the merge queue, branch health metrics, and the AI's semantic reasoning logs. Now integrated with live GitLab project statistics.
+                    A GitHub repository acts as the global state coordinator. It stores the merge queue, branch health metrics, and the AI's semantic reasoning logs in structured JSON files. Now integrated with live GitLab project statistics.
                   </p>
                 </div>
                 <div className="p-6 bg-zinc-900/50 rounded-3xl border border-zinc-800">
