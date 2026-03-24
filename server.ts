@@ -634,7 +634,7 @@ echo "Try running: git-ai status"
     const protocol = req.get('x-forwarded-proto') || req.protocol;
     const appUrl = process.env.APP_URL || `${protocol}://${host}`;
 
-const cliScript = `
+    const cliScript = `#!/usr/bin/env node
 const { spawnSync } = require('child_process');
 const http = require('http');
 const https = require('https');
@@ -668,36 +668,40 @@ async function apiRequest(path, method = 'GET', data = null) {
   const baseUrl = config.APP_URL || DEFAULT_APP_URL;
   
   return new Promise((resolve, reject) => {
-    const url = new URL(path, baseUrl);
-    const client = url.protocol === 'https:' ? https : http;
-    
-    const options = {
-      hostname: url.hostname,
-      port: url.port || (url.protocol === 'https:' ? 443 : 80),
-      path: url.pathname + url.search,
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Git-Token': config.GIT_TOKEN || '',
-        'X-Gemini-Key': config.GEMINI_API_KEY || ''
-      }
-    };
-
-    const req = client.request(options, (res) => {
-      let body = '';
-      res.on('data', (chunk) => body += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(body));
-        } catch (e) {
-          resolve(body);
+    try {
+      const url = new URL(path, baseUrl);
+      const client = url.protocol === 'https:' ? https : http;
+      
+      const options = {
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname + url.search,
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Git-Token': config.GIT_TOKEN || '',
+          'X-Gemini-Key': config.GEMINI_API_KEY || ''
         }
-      });
-    });
+      };
 
-    req.on('error', (e) => reject(e));
-    if (data) req.write(JSON.stringify(data));
-    req.end();
+      const req = client.request(options, (res) => {
+        let body = '';
+        res.on('data', (chunk) => body += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(body));
+          } catch (e) {
+            resolve(body);
+          }
+        });
+      });
+
+      req.on('error', (e) => reject(e));
+      if (data) req.write(JSON.stringify(data));
+      req.end();
+    } catch (e) {
+      reject(new Error("Invalid APP_URL. Please set it using: git-ai config set APP_URL <your-app-url>"));
+    }
   });
 }
 
@@ -735,11 +739,15 @@ async function run() {
       console.log('\\nStatus:', data.status.toUpperCase());
       console.log('Queue Size:', data.queueSize);
       console.log('\\nCURRENT JOB:');
-      console.log('  Branch:', data.currentJob.branch);
-      console.log('  Status:', data.currentJob.status);
-      console.log('  Progress:', data.currentJob.progress + '%');
+      console.log('  Branch:', data.currentJob ? data.currentJob.branch : 'None');
+      console.log('  Status:', data.currentJob ? data.currentJob.status : 'Idle');
+      console.log('  Progress:', data.currentJob ? data.currentJob.progress + '%' : '0%');
       console.log('\\nNEXT IN QUEUE:');
-      data.nextInQueue.forEach((b, i) => console.log('  ' + (i + 1) + '. ' + b));
+      if (data.nextInQueue && data.nextInQueue.length > 0) {
+        data.nextInQueue.forEach((b, i) => console.log('  ' + (i + 1) + '. ' + b));
+      } else {
+        console.log('  (Empty)');
+      }
     } catch (e) {
       console.error('Error fetching status:', e.message);
     }
@@ -759,8 +767,8 @@ async function run() {
       data.features.forEach(f => console.log('  ' + f.name.padEnd(20) + ' | ' + f.status.padEnd(10) + ' | ' + f.latency));
       console.log('\\nSUMMARY:');
       console.log(data.summary);
-    } catch (e) {
-      console.error('Error running benchmark:', e.message);
+    } catch (error) {
+      console.error('Error running benchmark:', error.message);
     }
   } else if (command === 'batch') {
     const prIds = args.slice(1);

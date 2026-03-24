@@ -25,6 +25,8 @@ import {
   Sparkles
 } from 'lucide-react';
 
+import { GoogleGenAI, Modality } from "@google/genai";
+
 // Architecture Diagram SVG
 const ArchitectureSVG = () => (
   <svg viewBox="0 0 800 500" className="w-full h-auto bg-white/5 rounded-3xl p-8 border border-white/10">
@@ -157,6 +159,99 @@ const MermaidDiagram = () => (
 export const DemoView: React.FC = () => {
   const [isPresenting, setIsPresenting] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  const slideScripts = [
+    "Welcome to the GitFlow AI presentation. This is Version 1, our foundational orchestration layer submitted for the GitLab Hackathon 2026. We focus on semantic conflict resolution and advanced merge strategies.",
+    "The core problem we solve is 'Merge Hell'. In large organizations, the coordination cost of merging dozens of branches daily is a massive bottleneck. GitFlow AI uses Gemini to understand intent and automate the orchestration.",
+    "Our architecture acts as an intelligent layer between engineers and GitLab. Gemini 3.1 Pro serves as the semantic engine, managing merge queues, resolving conflicts, and ensuring CI/CD integrity.",
+    "We offer two primary merge strategies. Mode A uses a binary tree approach for massive parallelization, while Mode B uses FIFO batching with atomic union groups to ensure system stability.",
+    "The tag-based rebase cycle ensures continuous synchronization. After every merge, all pending pull requests are automatically rebased onto the new state, resolving conflicts incrementally and keeping history clean.",
+    "Finally, our semantic conflict resolution goes beyond simple line-by-line diffs. Gemini understands the code's logic, allowing for intelligent interleaving of changes and providing clear explanations for every resolution."
+  ];
+
+  const stopAudio = () => {
+    if (audioSourceRef.current) {
+      try {
+        audioSourceRef.current.stop();
+      } catch (e) {
+        // Ignore if already stopped
+      }
+      audioSourceRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    setIsAudioLoading(false);
+  };
+
+  const playSlideAudio = async (index: number) => {
+    stopAudio();
+    if (isMuted) return;
+
+    setIsAudioLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: slideScripts[index] }] }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
+        },
+      });
+
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        audioContextRef.current = audioContext;
+
+        const binaryString = window.atob(base64Audio);
+        const len = binaryString.length;
+        const bytes = new Int16Array(len / 2);
+        for (let i = 0; i < len; i += 2) {
+          bytes[i / 2] = (binaryString.charCodeAt(i + 1) << 8) | binaryString.charCodeAt(i);
+        }
+
+        const float32Data = new Float32Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) {
+          float32Data[i] = bytes[i] / 32768.0;
+        }
+
+        const buffer = audioContext.createBuffer(1, float32Data.length, 24000);
+        buffer.getChannelData(0).set(float32Data);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.onended = () => {
+          setIsAudioLoading(false);
+        };
+        source.start();
+        audioSourceRef.current = source;
+      }
+    } catch (err) {
+      console.error("Audio generation failed:", err);
+      setIsAudioLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isPresenting && !isMuted) {
+      playSlideAudio(currentSlide);
+    } else {
+      stopAudio();
+    }
+    return () => stopAudio();
+  }, [currentSlide, isPresenting, isMuted]);
 
   const slides = [
     {
@@ -332,6 +427,13 @@ export const DemoView: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsMuted(!isMuted)}
+                      className={`p-2 rounded-lg transition-colors ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                      title={isMuted ? "Unmute" : "Mute"}
+                    >
+                      {isMuted ? <Volume2 className="opacity-40" size={20} /> : <Volume2 size={20} />}
+                    </button>
                     <button 
                       onClick={prevSlide}
                       disabled={currentSlide === 0}
