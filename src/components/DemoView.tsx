@@ -24,7 +24,9 @@ import {
   ChevronLeft,
   Sparkles,
   Timer,
-  Zap
+  Zap,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 import { GoogleGenAI, Modality } from "@google/genai";
@@ -160,6 +162,7 @@ const MermaidDiagram = () => (
 
 export const DemoView: React.FC = () => {
   const [isPresenting, setIsPresenting] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
@@ -214,6 +217,7 @@ export const DemoView: React.FC = () => {
 
   const stopPresentation = () => {
     setIsPresenting(false);
+    setIsFullScreen(false);
   };
 
   const nextSlide = () => {
@@ -436,50 +440,52 @@ export const DemoView: React.FC = () => {
 
 
   return (
-    <div className="max-w-5xl mx-auto space-y-16 pb-24">
+    <div className={`${isFullScreen ? 'fixed inset-0 z-[100] bg-black p-4 md:p-8' : 'max-w-7xl mx-auto space-y-16 pb-24'}`}>
       {/* Hero Section */}
-      <section className="text-center space-y-6">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-500 text-xs font-bold uppercase tracking-widest">
-          <Presentation size={14} />
-          Interactive Demo Mode
-        </div>
-        <h1 className="text-5xl font-bold tracking-tight text-white">Experience GitFlow AI <span className="text-orange-500/60 text-2xl align-top ml-2">v1</span></h1>
-        <p className="text-white/40 max-w-2xl mx-auto">
-          Take a guided tour through our advanced merge orchestration system. This is the **initial Version 1** of the GitFlow AI project.
-        </p>
-        
-        <div className="flex justify-center gap-4">
-          {!isPresenting ? (
-            <button 
-              onClick={startPresentation}
-              className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
-            >
-              <Play size={20} className="group-hover:scale-110 transition-transform" />
-              Start Presentation
-            </button>
-          ) : (
-            <button 
-              onClick={stopPresentation}
-              className="flex items-center gap-3 bg-zinc-800 text-white px-8 py-4 rounded-2xl font-bold hover:bg-zinc-700 transition-all border border-white/10"
-            >
-              <Square size={20} />
-              Exit Presentation
-            </button>
-          )}
-        </div>
-      </section>
+      {!isFullScreen && (
+        <section className="text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-500 text-xs font-bold uppercase tracking-widest">
+            <Presentation size={14} />
+            Interactive Demo Mode
+          </div>
+          <h1 className="text-5xl font-bold tracking-tight text-white">Experience GitFlow AI <span className="text-orange-500/60 text-2xl align-top ml-2">v1</span></h1>
+          <p className="text-white/40 max-w-2xl mx-auto">
+            Take a guided tour through our advanced merge orchestration system. This is the **initial Version 1** of the GitFlow AI project.
+          </p>
+          
+          <div className="flex justify-center gap-4">
+            {!isPresenting ? (
+              <button 
+                onClick={startPresentation}
+                className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
+              >
+                <Play size={20} className="group-hover:scale-110 transition-transform" />
+                Start Presentation
+              </button>
+            ) : (
+              <button 
+                onClick={stopPresentation}
+                className="flex items-center gap-3 bg-zinc-800 text-white px-8 py-4 rounded-2xl font-bold hover:bg-zinc-700 transition-all border border-white/10"
+              >
+                <Square size={20} />
+                Exit Presentation
+              </button>
+            )}
+          </div>
+        </section>
+      )}
 
-      <div className="w-full">
+      <div className={`w-full ${isFullScreen ? 'h-full' : ''}`}>
         {/* Right Column: Presentation / Overview */}
-        <div className="w-full">
+        <div className={`w-full ${isFullScreen ? 'h-full' : ''}`}>
           <AnimatePresence mode="wait">
             {isPresenting ? (
               <motion.div
                 key="presentation"
-                initial={{ opacity: 0, x: 20 }}
+                initial={isFullScreen ? { opacity: 0 } : { opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-[#1C1D21] border border-orange-500/20 rounded-[32px] p-8 h-[600px] flex flex-col shadow-2xl shadow-orange-500/5"
+                className={`bg-[#1C1D21] border border-orange-500/20 rounded-[32px] p-8 flex flex-col shadow-2xl shadow-orange-500/5 ${isFullScreen ? 'h-full' : 'h-[800px]'}`}
               >
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-4">
@@ -504,6 +510,13 @@ export const DemoView: React.FC = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsFullScreen(!isFullScreen)}
+                      className="p-2 bg-white/5 text-white hover:bg-white/10 rounded-lg transition-colors"
+                      title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                    >
+                      {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                    </button>
                     <button 
                       onClick={() => setIsAutoAdvance(!isAutoAdvance)}
                       className={`p-2 rounded-lg transition-colors ${isAutoAdvance ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/5 text-white hover:bg-white/10'}`}
