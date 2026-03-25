@@ -175,7 +175,6 @@ export const DemoView: React.FC = () => {
     "We offer two primary merge strategies. Mode A uses Binary Tree pairing for massive parallelization. Mode B focuses on stability through FIFO batching with Atomic Union Groups, ensuring related changes are tested and merged as a single, verified unit.",
     "Our Tag-Based Rebase Cycle is a game-changer. GitFlow AI automatically rebases all pending pull requests onto the new master state immediately after every merge. This ensures developers always work against the latest code, keeping the git history clean and linear.",
     "Semantic Conflict Resolution is where Gemini truly shines. Standard tools only see line-diffs, but GitFlow AI understands code logic. Gemini intelligently interleaves changes or suggests resolutions that preserve functional intent, preventing build failures that standard Git would miss.",
-    "The impact is measurable. By automating merge and rebase cycles, we reduce manual engineering overhead by an estimated 70%. Our 'Mission Control' dashboard provides real-time visibility into codebase health, conflict density, and merge velocity.",
     "Looking ahead, we are building predictive conflict detection and AI-driven capacity planning. We are redefining software delivery with GitFlow AI. Thank you for joining us, and thanks for judging."
   ];
 
@@ -407,31 +406,6 @@ export const DemoView: React.FC = () => {
               <p className="text-[10px] text-white/40">{opt.desc}</p>
             </div>
           ))}
-        </div>
-      )
-    },
-    {
-      title: "Impact & Productivity",
-      subtitle: "The 70% ROI",
-      icon: <Zap className="text-yellow-500" size={32} />,
-      description: "We don't just save time; we improve quality. Our 'Mission Control' dashboard gives you real-time visibility into the health of your entire organization.",
-      content: (
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "Overhead", value: "-70%", color: "text-emerald-500" },
-            { label: "Velocity", value: "+45%", color: "text-blue-500" },
-            { label: "Stability", value: "99.9%", color: "text-orange-500" },
-          ].map((stat, i) => (
-            <div key={i} className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">{stat.label}</p>
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-            </div>
-          ))}
-          <div className="col-span-3 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
-            <p className="text-xs text-white/60 leading-relaxed">
-              "GitFlow AI transformed our bi-weekly merge nightmare into a continuous, silent background process."
-            </p>
-          </div>
         </div>
       )
     },
