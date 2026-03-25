@@ -28,7 +28,7 @@ We modeled our merge strategies using graph theory. For a set of $N$ pull reques
 
 The biggest hurdle was **Real-Time Synchronization**. Orchestrating a Git rebase is a destructive operation if not handled carefully. We had to build a "Safety First" layer that stages every AI resolution in a temporary "Shadow Branch" before it ever touches the main project. 
 
-Another challenge was the **Multimodal Live API integration**. Ensuring the audio stream and the text transcript stayed perfectly synced during a 4-minute continuous monologue required precise handling of PCM audio buffers and state management in React to prevent "Transcript Drift."
+Another challenge was the **Multimodal Live API integration**. Ensuring the audio stream and the text transcript stayed perfectly synced during a 3-minute continuous monologue required precise handling of PCM audio buffers and state management in React to prevent "Transcript Drift."
 
 ## What We Learned
 

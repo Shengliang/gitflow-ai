@@ -85,7 +85,7 @@ export const JudgeView: React.FC = () => {
           </div>
           <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-2">
             <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Live Presentation</p>
-            <p className="text-sm text-white/80">Watch the 4-minute AI-guided tour of the system architecture.</p>
+            <p className="text-sm text-white/80">Watch the 3-minute AI-guided tour of the system architecture.</p>
             <button 
               onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: 'demo' }))}
               className="mt-4 flex items-center gap-2 text-sm font-bold text-white hover:text-emerald-500 transition-colors"
