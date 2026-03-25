@@ -215,9 +215,10 @@ export const DemoView: React.FC = () => {
   const [isPresenting, setIsPresenting] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(220); // 3 minutes 40 seconds in seconds
+  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
   const [isMuted, setIsMuted] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [isFromCache, setIsFromCache] = useState(false);
   const [isAutoAdvance, setIsAutoAdvance] = useState(true);
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -265,7 +266,7 @@ export const DemoView: React.FC = () => {
     
     setIsPresenting(true);
     setCurrentSlide(0);
-    setTimeLeft(220);
+    setTimeLeft(180);
     setAudioError(null);
   };
 
@@ -294,13 +295,16 @@ export const DemoView: React.FC = () => {
 
     setIsAudioLoading(true);
     setAudioError(null);
+    setIsFromCache(false);
     
     try {
       // Check cache first
       const cacheKey = `slide_${index}_${slideScripts[index].length}`;
       let base64Audio = await getCachedAudio(cacheKey);
 
-      if (!base64Audio) {
+      if (base64Audio) {
+        setIsFromCache(true);
+      } else {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
           throw new Error("Gemini API Key is missing. Please check your environment settings.");
@@ -604,7 +608,15 @@ export const DemoView: React.FC = () => {
                     {isAudioLoading && (
                       <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full animate-pulse">
                         <Mic size={12} className="text-orange-500" />
-                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">AI Narrating...</span>
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                          {isFromCache ? 'Cached Narration' : 'AI Narrating...'}
+                        </span>
+                      </div>
+                    )}
+                    {isFromCache && !isAudioLoading && (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full">
+                        <Zap size={12} className="text-emerald-500" />
+                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Running from Cache</span>
                       </div>
                     )}
                     {audioError && (
