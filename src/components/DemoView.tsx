@@ -164,6 +164,7 @@ export const DemoView: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isAutoAdvance, setIsAutoAdvance] = useState(true);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
@@ -194,9 +195,22 @@ export const DemoView: React.FC = () => {
     setIsAudioLoading(false);
   };
 
-  const startPresentation = () => {
+  const startPresentation = async () => {
+    // Initialize or resume AudioContext on user gesture
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+    } catch (e) {
+      console.error("Failed to initialize AudioContext:", e);
+    }
+    
     setIsPresenting(true);
     setCurrentSlide(0);
+    setAudioError(null);
   };
 
   const stopPresentation = () => {
@@ -222,8 +236,15 @@ export const DemoView: React.FC = () => {
     if (isMuted) return;
 
     setIsAudioLoading(true);
+    setAudioError(null);
+    
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Gemini API Key is missing. Please check your environment settings.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: slideScripts[index] }] }],
@@ -239,8 +260,16 @@ export const DemoView: React.FC = () => {
 
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        audioContextRef.current = audioContext;
+        // Use existing context or create new one
+        let audioContext = audioContextRef.current;
+        if (!audioContext || audioContext.state === 'closed') {
+          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+          audioContextRef.current = audioContext;
+        }
+
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
 
         const binaryString = window.atob(base64Audio);
         const len = binaryString.length;
@@ -263,7 +292,6 @@ export const DemoView: React.FC = () => {
         source.onended = () => {
           setIsAudioLoading(false);
           if (isAutoAdvance && isPresenting) {
-            // Small delay before advancing
             setTimeout(() => {
               nextSlide();
             }, 1500);
@@ -271,9 +299,13 @@ export const DemoView: React.FC = () => {
         };
         source.start();
         audioSourceRef.current = source;
+      } else {
+        throw new Error("No audio data received from the AI model.");
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Audio generation failed";
       console.error("Audio generation failed:", err);
+      setAudioError(errorMessage);
       setIsAudioLoading(false);
     }
   };
@@ -484,6 +516,18 @@ export const DemoView: React.FC = () => {
                       <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-1">Slide {currentSlide + 1} of {slides.length}</p>
                       <h2 className="text-2xl font-bold text-white">{slides[currentSlide].title}</h2>
                     </div>
+                    {isAudioLoading && (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full animate-pulse">
+                        <Mic size={12} className="text-orange-500" />
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">AI Narrating...</span>
+                      </div>
+                    )}
+                    {audioError && (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full">
+                        <AlertCircle size={12} className="text-red-500" />
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Audio Error</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button 
