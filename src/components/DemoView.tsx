@@ -26,7 +26,8 @@ import {
   Timer,
   Zap,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Clock
 } from 'lucide-react';
 
 import { GoogleGenAI, Modality } from "@google/genai";
@@ -160,10 +161,61 @@ const MermaidDiagram = () => (
   </pre>
 );
 
+// IndexedDB Cache Utilities
+const DB_NAME = 'GitFlowAudioCache';
+const STORE_NAME = 'audio';
+const DB_VERSION = 1;
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const getCachedAudio = async (key: string): Promise<string | null> => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(key);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.warn('IndexedDB error:', e);
+    return null;
+  }
+};
+
+const setCachedAudio = async (key: string, value: string): Promise<void> => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(value, key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.warn('IndexedDB error:', e);
+  }
+};
+
 export const DemoView: React.FC = () => {
   const [isPresenting, setIsPresenting] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
   const [isMuted, setIsMuted] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isAutoAdvance, setIsAutoAdvance] = useState(true);
@@ -212,6 +264,7 @@ export const DemoView: React.FC = () => {
     
     setIsPresenting(true);
     setCurrentSlide(0);
+    setTimeLeft(180);
     setAudioError(null);
   };
 
@@ -242,26 +295,36 @@ export const DemoView: React.FC = () => {
     setAudioError(null);
     
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API Key is missing. Please check your environment settings.");
-      }
+      // Check cache first
+      const cacheKey = `slide_${index}_${slideScripts[index].length}`;
+      let base64Audio = await getCachedAudio(cacheKey);
 
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: slideScripts[index] }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
+      if (!base64Audio) {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Gemini API Key is missing. Please check your environment settings.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash-preview-tts",
+          contents: [{ parts: [{ text: slideScripts[index] }] }],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' },
+              },
             },
           },
-        },
-      });
+        });
 
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
+        if (base64Audio) {
+          await setCachedAudio(cacheKey, base64Audio);
+        }
+      }
+
       if (base64Audio) {
         // Use existing context or create new one
         let audioContext = audioContextRef.current;
@@ -321,6 +384,22 @@ export const DemoView: React.FC = () => {
     }
     return () => stopAudio();
   }, [currentSlide, isPresenting, isMuted]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPresenting && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPresenting, timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const slides = [
     {
@@ -510,6 +589,12 @@ export const DemoView: React.FC = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    {/* Countdown Clock */}
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${timeLeft < 30 ? 'bg-red-500/20 border-red-500/50 text-red-500 animate-pulse' : 'bg-white/5 border-white/10 text-white/60'}`}>
+                      <Clock size={16} />
+                      <span className="text-sm font-mono font-bold">{formatTime(timeLeft)}</span>
+                    </div>
+
                     <button 
                       onClick={() => setIsFullScreen(!isFullScreen)}
                       className="p-2 bg-white/5 text-white hover:bg-white/10 rounded-lg transition-colors"
