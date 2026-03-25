@@ -9,19 +9,35 @@ interface Message {
   type?: 'text' | 'summary' | 'security';
 }
 
-export const GitLabDoAgent: React.FC = () => {
+interface GitLabDoAgentProps {
+  onClose?: () => void;
+  onNewMessage?: () => void;
+}
+
+export const GitLabDoAgent: React.FC<GitLabDoAgentProps> = ({ onClose, onNewMessage }) => {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Hello! I'm GitLab Duo. I'm here to help you orchestrate your workspace and analyze your code. What can I do for you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+    if (messages.length > 1 && onNewMessage) {
+      onNewMessage();
+    }
   }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
@@ -176,6 +192,14 @@ export const GitLabDoAgent: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-indigo-500 animate-pulse" />
+            {onClose && (
+              <button 
+                onClick={onClose}
+                className="p-2 text-white/20 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -248,6 +272,7 @@ export const GitLabDoAgent: React.FC = () => {
 
         <div className="relative">
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -257,7 +282,7 @@ export const GitLabDoAgent: React.FC = () => {
               }
             }}
             placeholder="Ask Duo anything..."
-            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-6 pr-14 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-indigo-500 transition-colors resize-none h-24"
+            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-6 pr-14 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-indigo-500 transition-colors resize-none min-h-[60px] max-h-[200px]"
           />
           <button 
             onClick={handleSend}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { GitLabDoAgent } from './components/GitLabDoAgent';
 import { PRCard } from './components/PRCard';
@@ -75,6 +75,31 @@ export default function App() {
     { id: 't2', name: 'AI Research', engineers: ['Charlie', 'David'], members: 3, activeMRs: 2, performance: 95 }
   ]);
   const [error, setError] = useState<string | null>(null);
+  const [isDuoVisible, setIsDuoVisible] = useState(true);
+  const [autoHideDuo, setAutoHideDuo] = useState(false);
+  const [hasUnreadDuo, setHasUnreadDuo] = useState(false);
+  const duoTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (autoHideDuo && isDuoVisible) {
+      const resetTimer = () => {
+        if (duoTimerRef.current) clearTimeout(duoTimerRef.current);
+        duoTimerRef.current = setTimeout(() => {
+          setIsDuoVisible(false);
+        }, 30000); // Hide after 30 seconds of inactivity
+      };
+
+      resetTimer();
+      window.addEventListener('mousemove', resetTimer);
+      window.addEventListener('keydown', resetTimer);
+
+      return () => {
+        if (duoTimerRef.current) clearTimeout(duoTimerRef.current);
+        window.removeEventListener('mousemove', resetTimer);
+        window.removeEventListener('keydown', resetTimer);
+      };
+    }
+  }, [autoHideDuo, isDuoVisible]);
 
   const [stats, setStats] = useState({
     totalMerges: 124,
@@ -554,12 +579,39 @@ export default function App() {
   return (
     <div className="flex h-screen bg-[#0A0B0D] text-white font-sans overflow-hidden">
       {/* Left Rail - GitFlow AI Menu */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenCLI={() => setIsCLIOpen(true)} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onOpenCLI={() => setIsCLIOpen(true)} 
+        isDuoVisible={isDuoVisible}
+        setIsDuoVisible={(visible) => {
+          setIsDuoVisible(visible);
+          if (visible) setHasUnreadDuo(false);
+        }}
+        hasUnreadDuo={hasUnreadDuo}
+      />
 
       {/* Left Frame - GitLab Duo Agent */}
-      <div className="w-96 h-full border-r border-white/10 bg-[#151619] z-40 shrink-0 hidden lg:block">
-        <GitLabDoAgent />
-      </div>
+      <AnimatePresence>
+        {isDuoVisible && (
+          <motion.div 
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 384, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="h-full border-r border-white/10 bg-[#151619] z-40 shrink-0 hidden lg:block overflow-hidden"
+          >
+            <div className="w-96 h-full">
+              <GitLabDoAgent 
+                onClose={() => setIsDuoVisible(false)} 
+                onNewMessage={() => {
+                  if (!isDuoVisible) setHasUnreadDuo(true);
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex flex-col min-w-0 relative">
         <main className="flex-1 p-8 overflow-y-auto">
@@ -1049,6 +1101,19 @@ export default function App() {
                     <div className="w-12 h-6 bg-orange-500 rounded-full relative">
                       <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                    <div>
+                      <p className="text-sm font-medium">Auto-hide GitLab Duo</p>
+                      <p className="text-xs text-white/40">Automatically hide the agent window when not in use</p>
+                    </div>
+                    <button 
+                      onClick={() => setAutoHideDuo(!autoHideDuo)}
+                      className={`w-12 h-6 rounded-full relative transition-colors ${autoHideDuo ? 'bg-orange-500' : 'bg-white/10'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoHideDuo ? 'right-1' : 'left-1'}`}></div>
+                    </button>
                   </div>
 
                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">

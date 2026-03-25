@@ -5,9 +5,12 @@ interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenCLI: () => void;
+  isDuoVisible: boolean;
+  setIsDuoVisible: (visible: boolean) => void;
+  hasUnreadDuo: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpenCLI }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpenCLI, isDuoVisible, setIsDuoVisible, hasUnreadDuo }) => {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'repositories', icon: Globe, label: 'Repositories' },
@@ -54,6 +57,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpe
           </button>
         ))}
         <div className="pt-4 mt-4 border-t border-white/5">
+          <button
+            onClick={() => {
+              setIsDuoVisible(!isDuoVisible);
+            }}
+            title={isDuoVisible ? "Hide GitLab Duo" : "Show GitLab Duo"}
+            className={`w-full flex items-center justify-center p-3 rounded-xl transition-all group relative ${
+              isDuoVisible ? 'text-indigo-500 bg-indigo-500/10' : 'text-white/30 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Bot size={22} />
+            {hasUnreadDuo && !isDuoVisible && (
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-[#151619] animate-pulse"></div>
+            )}
+            <div className="absolute left-full ml-2 px-2 py-1 bg-black border border-white/10 rounded-md text-[10px] font-bold text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+              {isDuoVisible ? "Hide GitLab Duo" : "Show GitLab Duo"}
+            </div>
+          </button>
           <button
             onClick={onOpenCLI}
             title="Terminal CLI"
