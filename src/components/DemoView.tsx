@@ -374,7 +374,25 @@ export const DemoView: React.FC = () => {
         throw new Error("No audio data received from the AI model.");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Audio generation failed";
+      let errorMessage = "Audio generation failed";
+      
+      try {
+        // Try to parse the error message if it's a JSON string from the API
+        const rawMessage = err instanceof Error ? err.message : String(err);
+        const errorData = JSON.parse(rawMessage);
+        
+        if (errorData?.error?.code === 429 || errorData?.status === "RESOURCE_EXHAUSTED") {
+          errorMessage = "Gemini API Quota (429)";
+        } else if (errorData?.error?.message) {
+          errorMessage = errorData.error.message;
+        } else {
+          errorMessage = rawMessage;
+        }
+      } catch (e) {
+        // Not a JSON error, use the standard error message
+        errorMessage = err instanceof Error ? err.message : "Audio generation failed";
+      }
+
       console.error("Audio generation failed:", err);
       setAudioError(errorMessage);
       setIsAudioLoading(false);
@@ -620,9 +638,20 @@ export const DemoView: React.FC = () => {
                       </div>
                     )}
                     {audioError && (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full">
-                        <AlertCircle size={12} className="text-red-500" />
-                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Audio Error</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full">
+                          <AlertCircle size={12} className="text-red-500" />
+                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest" title={audioError}>
+                            {audioError.includes('Quota') ? 'Gemini API Quota (429)' : 'Audio Error'}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => playSlideAudio(currentSlide)}
+                          className="p-1 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-white"
+                          title="Retry Audio"
+                        >
+                          <Zap size={14} />
+                        </button>
                       </div>
                     )}
                   </div>
