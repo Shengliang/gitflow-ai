@@ -98,7 +98,7 @@ export const ProjectInfo: React.FC = () => {
                 <Globe size={16} className="text-white/40" />
                 <div>
                   <p className="text-[10px] text-white/20 uppercase font-bold">App URL</p>
-                  <p className="text-xs text-white/60 truncate max-w-[180px]">https://ais-pre-kxsusitd3wvrmxfiakdr7o-97597776023.us-west1.run.app</p>
+                  <p className="text-xs text-white/60 truncate max-w-[180px]">https://gitflow-ai-600965458720.us-west1.run.app</p>
                 </div>
               </div>
             </div>

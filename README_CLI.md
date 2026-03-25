@@ -8,7 +8,7 @@ You can install the CLI directly from the hosted orchestrator or download it fro
 
 - **One-line Install:**
   ```bash
-  curl -sL https://gitflow-ai-883388654208.us-west1.run.app/install.sh | bash
+  curl -sL https://gitflow-ai-600965458720.us-west1.run.app/install.sh | bash
   ```
 
 - **Alternative: Install from Source (GitHub):**
@@ -16,7 +16,7 @@ You can install the CLI directly from the hosted orchestrator or download it fro
   curl -sL https://raw.githubusercontent.com/Shengliang/gitflow-ai/refs/heads/main/public/git-ai.js -o ~/.local/bin/git-ai && chmod +x ~/.local/bin/git-ai
   
   # Then set your orchestrator URL
-  git-ai config set APP_URL https://gitflow-ai-883388654208.us-west1.run.app
+  git-ai config set APP_URL https://gitflow-ai-600965458720.us-west1.run.app
   ```
 
 - **Direct Download:** [Download CLI SDK (ZIP)](https://github.com/Shengliang/gitflow-ai/archive/refs/heads/main.zip)

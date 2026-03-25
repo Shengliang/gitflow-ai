@@ -566,7 +566,7 @@ test_job:
               </p>
               <div className="p-8 bg-white rounded-[40px] shadow-2xl shadow-blue-500/20 border-8 border-zinc-900">
                 <QRCodeSVG 
-                  value="https://ais-pre-kxsusitd3wvrmxfiakdr7o-97597776023.us-west1.run.app" 
+                  value="https://gitflow-ai-600965458720.us-west1.run.app" 
                   size={200}
                   level="H"
                   includeMargin={true}
