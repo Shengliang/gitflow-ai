@@ -37,6 +37,55 @@ export const LocalCLITab: React.FC = () => {
       example: 'git-ai rebase master'
     },
     {
+      name: 'git-ai cherry-pick',
+      description: 'AI-analyzed cherry-pick (supports ranges). Automatically attempts AI resolution if conflicts occur.',
+      icon: GitBranch,
+      color: 'text-orange-500',
+      example: 'git-ai cherry-pick hash1..hash2'
+    },
+    {
+      name: 'git-ai resolve',
+      description: 'Manually trigger AI conflict resolution for the current repository state.',
+      icon: ShieldCheck,
+      color: 'text-emerald-500',
+      example: 'git-ai resolve'
+    },
+    {
+      name: 'git-ai sync',
+      description: 'AI-orchestrated multi-repo synchronization. Sync multiple sources into a single destination.',
+      icon: RefreshCw,
+      color: 'text-blue-500',
+      example: 'git-ai sync dest_repo source_repo1 source_repo2'
+    },
+    {
+      name: 'git-ai queue',
+      description: 'Directly manage the AI Merge Queue (add/remove/list/pause/unpause).',
+      icon: GitPullRequest,
+      color: 'text-purple-500',
+      example: 'git-ai queue pause'
+    },
+    {
+      name: 'git-ai reorder',
+      description: 'Change the position of a PR in the merge queue.',
+      icon: RefreshCw,
+      color: 'text-blue-400',
+      example: 'git-ai reorder PR-123 2'
+    },
+    {
+      name: 'git-ai atomic_batch',
+      description: 'Group multiple PRs into an atomic batch for synchronized merging.',
+      icon: Zap,
+      color: 'text-orange-400',
+      example: 'git-ai atomic_batch "Auth Refactor" PR-1 PR-2'
+    },
+    {
+      name: 'git-ai priority',
+      description: 'Set the priority of a PR in the merge queue (high/low).',
+      icon: Zap,
+      color: 'text-orange-500',
+      example: 'git-ai priority PR-123 high'
+    },
+    {
       name: 'git-ai status',
       description: 'Fetches the global merge queue status directly from the terminal.',
       icon: GitPullRequest,
@@ -45,10 +94,31 @@ export const LocalCLITab: React.FC = () => {
     },
     {
       name: 'git-ai benchmark',
-      description: 'Runs a complete AI GitFlow benchmark using GitLab APIs to verify integration and performance.',
+      description: 'Runs a complete AI GitFlow benchmark. Use --with-ai to enable Gemini-powered review and resolution tests.',
       icon: Activity,
       color: 'text-emerald-400',
-      example: 'git-ai benchmark'
+      example: 'git-ai benchmark --with-ai'
+    },
+    {
+      name: 'git-ai clone',
+      description: 'Clones a repository and automatically configures the AI settings for the project.',
+      icon: GitBranch,
+      color: 'text-blue-500',
+      example: 'git-ai clone repo_uri'
+    },
+    {
+      name: 'git-ai config',
+      description: 'Manage API keys and local configuration (set/get/list).',
+      icon: ShieldCheck,
+      color: 'text-white/60',
+      example: 'git-ai config list'
+    },
+    {
+      name: 'git-ai version',
+      description: 'Show the current CLI version.',
+      icon: ShieldCheck,
+      color: 'text-white/40',
+      example: 'git-ai version'
     },
     {
       name: 'git-ai help',

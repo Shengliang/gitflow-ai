@@ -404,9 +404,18 @@ export const DesignDoc: React.FC = () => {
 
                 <div className="border-l-2 border-blue-500 pl-6 py-2">
                   <h3 className="text-white font-bold text-lg mb-2 italic">Atomic Union Groups</h3>
-                  <p className="text-zinc-500 text-sm leading-relaxed">
+                  <p className="text-zinc-500 text-sm leading-relaxed mb-4">
                     Gemini analyzes the dependency graph of all pending PRs. If PR-A modifies a function signature used by PR-B, they are grouped into a **Union Group**. These groups are merged atomically—if one fails, the entire group is rolled back to maintain system stability.
                   </p>
+                  <DataTable 
+                    headers={["Feature", "Individual Submission", "Atomic Batch"]}
+                    rows={[
+                      ["Merge Logic", "PRs are tested and merged one by one.", "All PRs in the batch are merged and tested together."],
+                      ["Failure Handling", "If PR #2 fails, PR #1 stays merged.", "**All-or-Nothing.** Any failure rejects the entire batch."],
+                      ["Dependencies", "Best for independent features.", "**Required** for cross-dependent changes."],
+                      ["AI Optimization", "AI identifies conflicts between PRs.", "AI optimizes merge order across the group."]
+                    ]}
+                  />
                 </div>
 
                 <div className="border-l-2 border-blue-500 pl-6 py-2">
@@ -463,13 +472,21 @@ export const DesignDoc: React.FC = () => {
                   <DataTable 
                     headers={["Command", "Description", "Parameters"]}
                     rows={[
-                      ["`status`", "Check merge queue status and PR counts.", "None"],
-                      ["`pause`", "Suspend the automated merge workflow.", "None"],
-                      ["`unpause`", "Resume the automated merge workflow.", "None"],
-                      ["`reorder`", "Change the priority/order of PRs in queue.", "`pr_id`, `position`"],
-                      ["`remove`", "Eject a PR from the merge queue.", "`pr_id`"],
-                      ["`batch`", "Group PRs into an atomic unit.", "`pr_ids[]`"],
-                      ["`priority`", "Set PR priority (High/Low).", "`pr_id`, `level`"]
+                      ["`commit`", "AI-powered commit with pre-analysis.", "Standard git commit flags"],
+                      ["`push`", "Push and register with AI Merge Queue.", "Standard git push flags"],
+                      ["`rebase`", "AI-monitored rebase for conflict resolution.", "Standard git rebase flags"],
+                      ["`cherry-pick`", "AI-analyzed cherry-pick (supports ranges).", "`hash|range`"],
+                      ["`resolve`", "Manually trigger AI conflict resolution.", "None"],
+                      ["`clone`", "Clone and auto-configure AI settings.", "`repo_uri`"],
+                      ["`sync`", "AI-orchestrated multi-repo sync.", "`dest_repo`, `source_repos[]`"],
+                      ["`queue`", "Manage AI Merge Queue.", "`add|remove|list|pause|unpause`"],
+                      ["`reorder`", "Change PR position in queue.", "`pr_id`, `position`"],
+                      ["`atomic_batch`", "Group PRs into an atomic unit.", "`name`, `pr_ids[]`"],
+                      ["`priority`", "Set PR priority (High/Low).", "`pr_id`, `level`"],
+                      ["`status`", "Check global AI Merge Queue status.", "None"],
+                      ["`benchmark`", "Run GitLab API integration benchmark.", "`--with-ai` (optional)"],
+                      ["`config`", "Manage API keys and local configuration.", "`set|get|list`"],
+                      ["`version`", "Show CLI version.", "None"]
                     ]}
                   />
                 </div>

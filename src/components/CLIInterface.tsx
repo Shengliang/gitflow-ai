@@ -50,14 +50,20 @@ export const CLIInterface: React.FC<CLIInterfaceProps> = ({ isOpen, onClose, prs
       case 'help':
         setHistory(prev => [...prev, { type: 'output', content: `
 Available Commands:
-  status          Check merge queue status
-  benchmark       Run GitLab API integration benchmark
-  pause           Suspend automated merge workflow
-  unpause         Resume automated merge workflow
-  reorder <id> <pos>  Change PR position in queue
-  remove <id>     Eject PR from queue
-  batch <ids...>  Group PRs into atomic unit
+  commit          AI-powered commit with pre-analysis
+  push            Push and register with AI Merge Queue
+  rebase          AI-monitored rebase
+  cherry-pick     AI-analyzed cherry-pick (supports ranges)
+  resolve         Manually trigger AI conflict resolution
+  clone <uri>     Clone and auto-configure AI settings
+  sync <dest> <sources...> AI-orchestrated multi-repo sync
+  queue <action>  Manage AI Merge Queue (add/remove/list/pause/unpause)
+  reorder <id> <pos> Change PR position in queue
+  atomic_batch <name> <ids...> Group PRs into atomic unit
   priority <id> <h|l> Set PR priority
+  status          Check global AI Merge Queue status
+  benchmark       Run GitLab API integration benchmark
+  config <action> Manage API keys and local configuration
   clear           Clear terminal history
   exit            Close terminal
 
@@ -119,7 +125,7 @@ Merge Queue Status:
         break;
       case 'reorder':
       case 'remove':
-      case 'batch':
+      case 'atomic_batch':
       case 'priority':
         if (args.length === 0) {
           setHistory(prev => [...prev, { type: 'error', content: `Error: Command "${baseCmd}" requires arguments.` }]);

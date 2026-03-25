@@ -215,7 +215,7 @@ export const DemoView: React.FC = () => {
   const [isPresenting, setIsPresenting] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(220); // 3 minutes 40 seconds in seconds
   const [isMuted, setIsMuted] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isAutoAdvance, setIsAutoAdvance] = useState(true);
@@ -230,7 +230,8 @@ export const DemoView: React.FC = () => {
     "We offer two primary merge strategies. Mode A uses Binary Tree pairing for massive parallelization. Mode B focuses on stability through FIFO batching with Atomic Union Groups, ensuring related changes are tested and merged as a single, verified unit.",
     "Our Tag-Based Rebase Cycle is a game-changer. GitFlow AI automatically rebases all pending pull requests onto the new master state immediately after every merge. This ensures developers always work against the latest code, keeping the git history clean and linear.",
     "Semantic Conflict Resolution is where Gemini truly shines. Standard tools only see line-diffs, but GitFlow AI understands code logic. Gemini intelligently interleaves changes or suggests resolutions that preserve functional intent, preventing build failures that standard Git would miss.",
-    "Looking ahead, we are building predictive conflict detection and AI-driven capacity planning. We are redefining software delivery with GitFlow AI. Thank you for joining us, and thanks for judging."
+    "We've also launched a powerful Local CLI SDK. It's a terminal-first experience that wraps standard Git commands. Whether you're cherry-picking complex ranges, resolving conflicts with AI, or managing the global merge queue, you can do it all from your terminal. It even supports cost-saving benchmark modes, allowing teams to verify their integrations with or without Gemini tokens. This bridges the gap between our web orchestrator and your local development environment.",
+    "Looking ahead, our Version 2 roadmap is even more ambitious. We are building predictive conflict detection that identifies issues before a pull request is even opened. We're also developing AI-driven capacity planning to optimize team assignments based on code density and complexity. By integrating predictive CI, we'll run only the tests that matter for a specific change, further accelerating the delivery pipeline. We are redefining software delivery with GitFlow AI. Thank you for joining us, and thanks for judging."
   ];
 
   const stopAudio = () => {
@@ -264,7 +265,7 @@ export const DemoView: React.FC = () => {
     
     setIsPresenting(true);
     setCurrentSlide(0);
-    setTimeLeft(180);
+    setTimeLeft(220);
     setAudioError(null);
   };
 
@@ -489,6 +490,31 @@ export const DemoView: React.FC = () => {
               <p className="text-[10px] text-white/40">{opt.desc}</p>
             </div>
           ))}
+        </div>
+      )
+    },
+    {
+      title: "Local CLI SDK",
+      subtitle: "Terminal-First Productivity",
+      icon: <Terminal className="text-blue-500" size={32} />,
+      description: "Our CLI SDK brings the power of GitFlow AI directly to your terminal, intercepting standard Git commands to provide intelligent orchestration without leaving your IDE.",
+      content: (
+        <div className="space-y-4">
+          <div className="bg-black/40 p-4 rounded-xl font-mono text-xs text-emerald-400 border border-white/10">
+            $ git-ai cherry-pick hash1..hash2<br/>
+            $ git-ai resolve<br/>
+            $ git-ai benchmark --with-ai
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+              <h5 className="font-bold text-xs text-white/40 mb-1">AI Cherry-Pick</h5>
+              <p className="text-[10px] text-white/60">Semantic analysis of commit ranges.</p>
+            </div>
+            <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+              <h5 className="font-bold text-xs text-white/40 mb-1">AI Resolution</h5>
+              <p className="text-[10px] text-white/60">Auto-fix conflicts in terminal.</p>
+            </div>
+          </div>
         </div>
       )
     },
