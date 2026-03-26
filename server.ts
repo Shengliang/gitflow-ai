@@ -365,70 +365,119 @@ async function startServer() {
     try {
       // 1. Check if repository already exists using the full path (more efficient)
       console.log(`🔍 Checking if GitLab repository "${gitlabPath}" exists...`);
-      const checkResponse = await fetch(`https://gitlab.com/api/v4/projects/${encodeURIComponent(gitlabPath)}`, {
-        headers: { "PRIVATE-TOKEN": token }
-      });
       
-      if (checkResponse.ok) {
-        const project = await checkResponse.json();
-        console.log(`ℹ️ GitLab repository "${gitlabPath}" already exists. ID: ${project.id}`);
-        return res.json({
-          success: true,
-          alreadyExists: true,
-          message: `GitLab repository "${repoName}" already exists.`,
-          project: project
-        });
-      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
-      // 2. If not found by full path, try searching by name (fallback)
-      console.log(`🔍 Repository not found by path, searching for "${repoName}"...`);
-      const searchResponse = await fetch(`https://gitlab.com/api/v4/projects?search=${encodeURIComponent(repoName)}&owned=true`, {
-        headers: { "PRIVATE-TOKEN": token }
-      });
-      
-      if (searchResponse.ok) {
-        const existingProjects = await searchResponse.json();
-        const exactMatch = existingProjects.find((p: any) => p.name === repoName || p.path === repoName);
+      try {
+        const checkResponse = await fetch(`https://gitlab.com/api/v4/projects/${encodeURIComponent(gitlabPath)}`, {
+          headers: { "PRIVATE-TOKEN": token },
+          signal: controller.signal
+        });
         
-        if (exactMatch) {
-          console.log(`ℹ️ GitLab repository "${repoName}" found via search. ID: ${exactMatch.id}`);
+        clearTimeout(timeout);
+
+        if (checkResponse.ok) {
+          const project = await checkResponse.json();
+          console.log(`ℹ️ GitLab repository "${gitlabPath}" already exists. ID: ${project.id}`);
           return res.json({
             success: true,
             alreadyExists: true,
             message: `GitLab repository "${repoName}" already exists.`,
-            project: exactMatch
+            project: project
           });
+        } else if (checkResponse.status === 401) {
+          console.error("❌ GitLab API error: 401 Unauthorized. Check your GITLAB_TOKEN.");
+          return res.status(401).json({ error: "GitLab API error: 401 Unauthorized. Please check your GITLAB_TOKEN." });
+        } else if (checkResponse.status === 404) {
+          console.log(`ℹ️ Repository "${gitlabPath}" not found by path.`);
+        } else {
+          console.log(`ℹ️ GitLab API returned status ${checkResponse.status} for path check.`);
         }
+      } catch (err: any) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') {
+          console.error("❌ GitLab API check timed out after 3s.");
+          return res.status(504).json({ error: "GitLab API check timed out. GitLab might be slow or your token might be invalid." });
+        }
+        console.error("❌ Error during GitLab path check:", err.message);
+        // Fallback to search if path check fails for other reasons
+      }
+
+      // 2. If not found by full path, try searching by name (fallback)
+      console.log(`🔍 Searching for repository named "${repoName}"...`);
+      const searchController = new AbortController();
+      const searchTimeout = setTimeout(() => searchController.abort(), 3000);
+
+      try {
+        const searchResponse = await fetch(`https://gitlab.com/api/v4/projects?search=${encodeURIComponent(repoName)}&owned=true`, {
+          headers: { "PRIVATE-TOKEN": token },
+          signal: searchController.signal
+        });
+        
+        clearTimeout(searchTimeout);
+
+        if (searchResponse.ok) {
+          const existingProjects = await searchResponse.json();
+          const exactMatch = existingProjects.find((p: any) => p.name === repoName || p.path === repoName);
+          
+          if (exactMatch) {
+            console.log(`ℹ️ GitLab repository "${repoName}" found via search. ID: ${exactMatch.id}`);
+            return res.json({
+              success: true,
+              alreadyExists: true,
+              message: `GitLab repository "${repoName}" already exists.`,
+              project: exactMatch
+            });
+          }
+        }
+      } catch (err: any) {
+        clearTimeout(searchTimeout);
+        console.error("❌ Error during GitLab search:", err.message);
       }
 
       // 3. Create if not exists
       console.log(`🚀 Creating GitLab repository "${repoName}"...`);
-      const response = await fetch("https://gitlab.com/api/v4/projects", {
-        method: "POST",
-        headers: { 
-          "PRIVATE-TOKEN": token,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: repoName,
-          description: description || "Created via GitFlow AI Orchestrator",
-          visibility: "public",
-          initialize_with_readme: true
-        })
-      });
+      const createController = new AbortController();
+      const createTimeout = setTimeout(() => createController.abort(), 5000);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || response.statusText);
+      try {
+        const response = await fetch("https://gitlab.com/api/v4/projects", {
+          method: "POST",
+          headers: { 
+            "PRIVATE-TOKEN": token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: repoName,
+            description: description || "Created via GitFlow AI Orchestrator",
+            visibility: "public",
+            initialize_with_readme: true
+          }),
+          signal: createController.signal
+        });
+        
+        clearTimeout(createTimeout);
+
+        const data = await response.json();
+        if (!response.ok) {
+          console.error("❌ GitLab repository creation failed:", data.message || response.statusText);
+          throw new Error(data.message || response.statusText);
+        }
+
+        console.log(`✅ GitLab repository "${repoName}" created successfully. ID: ${data.id}`);
+        res.json({
+          success: true,
+          message: "GitLab repository created successfully.",
+          project: data
+        });
+        await logAudit("gitlab_repo_create", { repoName, project: data });
+      } catch (err: any) {
+        clearTimeout(createTimeout);
+        throw err;
       }
-
-      res.json({
-        success: true,
-        message: "GitLab repository created successfully.",
-        project: data
-      });
-      await logAudit("gitlab_repo_create", { repoName, project: data });
     } catch (error: any) {
+      console.error("❌ GitLab endpoint error:", error.message);
       res.status(500).json({ error: error.message });
     }
   });
