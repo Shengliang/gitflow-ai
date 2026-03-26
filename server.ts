@@ -18,24 +18,25 @@ const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "gitflow-queue";
 const GITHUB_AUDIT_REPO = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
 
-const getCleanRepoPath = (raw: string | undefined, fallback: string) => {
-  if (!raw) return fallback;
+const getCleanRepoPath = (raw: any, fallback: string): string => {
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  const str = String(raw);
   // Handle cases like "Owner/https://github.com/Owner/Repo"
-  const urlMatch = raw.match(/https?:\/\/(?:github|gitlab)\.com\/([^\s]+)/);
+  const urlMatch = str.match(/https?:\/\/(?:github|gitlab)\.com\/([^\s]+)/);
   if (urlMatch) {
     return urlMatch[1].replace(/\/$/, '').replace(/\.git$/, '');
   }
   // Handle cases like "Owner/Repo" or "Repo"
-  if (raw.includes('/')) {
+  if (str.includes('/')) {
     // If it has a slash but no http, it might be "owner/repo"
     // but we should still check if it has a leading "owner/http" mess
-    const parts = raw.split('/');
+    const parts = str.split('/');
     if (parts[1] && parts[1].startsWith('http')) {
-      return getCleanRepoPath(raw.substring(parts[0].length + 1), fallback);
+      return getCleanRepoPath(str.substring(parts[0].length + 1), fallback);
     }
-    return raw.replace(/\/$/, '');
+    return str.replace(/\/$/, '');
   }
-  return raw;
+  return str;
 };
 
 async function getFileContent(owner: string, repo: string, path: string) {
@@ -483,20 +484,20 @@ async function startServer() {
   });
 
   app.post("/api/gitlab/repo/sync", async (req, res) => {
-    const token = process.env.GITLAB_TOKEN;
-    if (!token) {
-      return res.status(400).json({ error: "GITLAB_TOKEN not configured." });
-    }
-
-    const { githubRepo, gitlabProjectId } = req.body;
-    
-    // Robustly parse GitHub Repo
-    const finalGithubPath = getCleanRepoPath(githubRepo || `${GITHUB_OWNER}/${GITHUB_REPO}`, "shengliangsong/gitflow-ai");
-
-    // Robustly parse GitLab Repo
-    const finalGitlabPath = getCleanRepoPath(gitlabProjectId || process.env.GITLAB_REPRO, "shengliangsong/gitflow-ai");
-
     try {
+      const token = process.env.GITLAB_TOKEN;
+      if (!token) {
+        return res.status(400).json({ error: "GITLAB_TOKEN not configured." });
+      }
+
+      const { githubRepo, gitlabProjectId } = req.body;
+      
+      // Robustly parse GitHub Repo
+      const finalGithubPath = getCleanRepoPath(githubRepo || `${GITHUB_OWNER}/${GITHUB_REPO}`, "shengliangsong/gitflow-ai");
+
+      // Robustly parse GitLab Repo
+      const finalGitlabPath = getCleanRepoPath(gitlabProjectId || process.env.GITLAB_REPRO, "shengliangsong/gitflow-ai");
+
       console.log(`🚀 Starting sync from GitHub (${finalGithubPath}) to GitLab (${finalGitlabPath})...`);
       
       // 1. Fetch commits from GitHub to show in the response
@@ -1341,4 +1342,7 @@ run();
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("❌ Failed to start server:", err);
+  process.exit(1);
+});
