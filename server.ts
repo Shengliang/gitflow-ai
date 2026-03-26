@@ -13,35 +13,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-
-// Robustly parse GitHub configuration
-const parseGitHubConfig = () => {
-  const ownerRaw = process.env.GITHUB_OWNER || "";
-  const repoRaw = process.env.GITHUB_REPO || "gitflow-queue";
-  const auditRaw = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
-
-  const cleanRepo = getCleanRepoPath(repoRaw, "gitflow-queue");
-  const cleanAudit = getCleanRepoPath(auditRaw, "gitflow-audit");
-
-  const [rOwner, rName] = cleanRepo.includes('/') ? cleanRepo.split('/') : [ownerRaw, cleanRepo];
-  const [aOwner, aName] = cleanAudit.includes('/') ? cleanAudit.split('/') : [ownerRaw, cleanAudit];
-
-  return {
-    owner: rOwner || aOwner || ownerRaw,
-    repo: rName,
-    auditRepo: aName,
-    auditOwner: aOwner || rOwner || ownerRaw
-  };
-};
-
-const githubConfig = parseGitHubConfig();
-const GITHUB_OWNER = githubConfig.owner;
-const GITHUB_REPO = githubConfig.repo;
-const GITHUB_AUDIT_REPO = githubConfig.auditRepo;
-const GITHUB_AUDIT_OWNER = githubConfig.auditOwner;
-
-const getCleanRepoPath = (raw: any, fallback: string): string => {
+function getCleanRepoPath(raw: any, fallback: string): string {
   if (raw === undefined || raw === null || raw === "") return fallback;
   const str = String(raw);
   // Handle cases like "Owner/https://github.com/Owner/Repo"
@@ -60,7 +32,33 @@ const getCleanRepoPath = (raw: any, fallback: string): string => {
     return str.replace(/\/$/, '');
   }
   return str;
-};
+}
+
+// Robustly parse GitHub configuration
+function parseGitHubConfig() {
+  const ownerRaw = process.env.GITHUB_OWNER || "";
+  const repoRaw = process.env.GITHUB_REPO || "gitflow-queue";
+  const auditRaw = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
+
+  const cleanRepo = getCleanRepoPath(repoRaw, "gitflow-queue");
+  const cleanAudit = getCleanRepoPath(auditRaw, "gitflow-audit");
+
+  const [rOwner, rName] = cleanRepo.includes('/') ? cleanRepo.split('/') : [ownerRaw, cleanRepo];
+  const [aOwner, aName] = cleanAudit.includes('/') ? cleanAudit.split('/') : [ownerRaw, cleanAudit];
+
+  return {
+    owner: rOwner || aOwner || ownerRaw,
+    repo: rName,
+    auditRepo: aName,
+    auditOwner: aOwner || rOwner || ownerRaw
+  };
+}
+
+let GITHUB_OWNER: string;
+let GITHUB_REPO: string;
+let GITHUB_AUDIT_REPO: string;
+let GITHUB_AUDIT_OWNER: string;
+let octokit: Octokit;
 
 async function getFileContent(owner: string, repo: string, path: string) {
   try {
@@ -130,8 +128,23 @@ async function logAudit(action: string, details: any) {
 }
 
 async function startServer() {
+  console.log("🚀 Starting GitFlow AI server...");
   const app = express();
   const PORT = 3000;
+
+  // Bind the port immediately to prevent the preview from hanging
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Server is now listening on http://0.0.0.0:${PORT}`);
+  });
+
+  console.log("🛠️ Initializing GitHub configuration...");
+  const githubConfig = parseGitHubConfig();
+  GITHUB_OWNER = githubConfig.owner;
+  GITHUB_REPO = githubConfig.repo;
+  GITHUB_AUDIT_REPO = githubConfig.auditRepo;
+  GITHUB_AUDIT_OWNER = githubConfig.auditOwner;
+
+  octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
   // Initial state if GitHub is not configured
   let mergeQueue: any[] = [];
@@ -141,16 +154,18 @@ async function startServer() {
     { id: '3', name: 'fix/merge-conflicts', type: 'project', lastCommit: 'Resolve binary tree issues', status: 'active' }
   ];
 
+  console.log("🔍 Checking environment...");
   // Check for git availability
   const gitCheck = spawnSync('git', ['--version']);
   if (gitCheck.status === 0) {
-    console.log(`Git available: ${gitCheck.stdout.toString().trim()}`);
+    console.log(`✅ Git available: ${gitCheck.stdout.toString().trim()}`);
   } else {
-    console.warn("Git NOT available in this environment. GitLab sync will fail.");
+    console.warn("⚠️ Git NOT available in this environment. GitLab sync will fail.");
   }
 
   app.use(express.json());
 
+  console.log("🛠️ Setting up sync helpers...");
   // Helper to sync with GitHub
   const syncQueueWithGitHub = async () => {
     if (!GITHUB_OWNER || !GITHUB_REPO || !process.env.GITHUB_TOKEN) return;
@@ -1388,10 +1403,12 @@ run();
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    console.log("📦 Starting Vite server...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
+    console.log("✅ Vite server started.");
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
@@ -1401,9 +1418,7 @@ run();
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  console.log("🚀 Server initialization complete.");
 }
 
 startServer().catch(err => {
