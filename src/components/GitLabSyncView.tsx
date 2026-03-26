@@ -88,7 +88,9 @@ export const GitLabSyncView: React.FC = () => {
     if (!repoCreated && !gitlabRepo) return;
     setIsSyncing(true);
     setSyncProgress(0);
-    const githubPath = `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`;
+    const githubPath = config?.GITHUB_REPO?.includes('/') 
+      ? config.GITHUB_REPO 
+      : `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`;
     const gitlabPath = config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
     
     setLogs(prev => [...prev, `🚀 Starting sync from GitHub (${githubPath}) to GitLab (${gitlabPath})...`]);
@@ -247,7 +249,11 @@ export const GitLabSyncView: React.FC = () => {
               <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                 <div className="flex items-center gap-3">
                   <Github size={20} className="text-white/40" />
-                  <span className="text-sm font-mono text-white/60">{config?.GITHUB_OWNER || 'Shengliang'}/{config?.GITHUB_REPO || 'gitflow-ai'}</span>
+                  <span className="text-sm font-mono text-white/60">
+                    {config?.GITHUB_REPO?.includes('/') 
+                      ? config.GITHUB_REPO 
+                      : `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`}
+                  </span>
                 </div>
                 <ArrowRight size={16} className="text-white/20" />
                 <div className="flex items-center gap-3">

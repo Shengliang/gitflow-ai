@@ -400,20 +400,30 @@ async function startServer() {
 
     const { githubRepo, gitlabProjectId } = req.body;
     
-    const finalGitlabDest = String(gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai');
+    // Robustly parse GitHub Repo
+    const rawGithub = String(githubRepo || `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}`);
+    const githubPath = rawGithub.includes('github.com/') 
+      ? rawGithub.split('github.com/')[1].replace(/\/$/, '').replace(/\.git$/, '')
+      : rawGithub.replace(/^[^\/]*\//, (match) => match.includes('http') ? '' : match).replace(/\/$/, '');
     
-    // Extract path if it's a full URL
-    const targetPath = finalGitlabDest.includes('gitlab.com/') 
-      ? finalGitlabDest.split('gitlab.com/')[1].replace(/\/$/, '').replace(/\.git$/, '')
-      : finalGitlabDest;
+    // Clean up if it still has a leading slash or is just the repo name
+    const finalGithubPath = githubPath.startsWith('/') ? githubPath.substring(1) : githubPath;
+
+    // Robustly parse GitLab Repo
+    const rawGitlab = String(gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai');
+    const gitlabPath = rawGitlab.includes('gitlab.com/') 
+      ? rawGitlab.split('gitlab.com/')[1].replace(/\/$/, '').replace(/\.git$/, '')
+      : rawGitlab.replace(/\/$/, '');
+    
+    const finalGitlabPath = gitlabPath.startsWith('/') ? gitlabPath.substring(1) : gitlabPath;
 
     try {
-      console.log(`Syncing commits from GitHub ${githubRepo} to GitLab ${targetPath}...`);
+      console.log(`Syncing commits from GitHub ${finalGithubPath} to GitLab ${finalGitlabPath}...`);
       
       // 1. Fetch commits from GitHub to show in the response
-      const ghResponse = await fetch(`https://api.github.com/repos/${githubRepo}/commits?per_page=10`);
+      const ghResponse = await fetch(`https://api.github.com/repos/${finalGithubPath}/commits?per_page=10`);
       if (!ghResponse.ok) {
-        throw new Error(`GitHub API error: ${ghResponse.statusText}`);
+        throw new Error(`GitHub API error: ${ghResponse.statusText} for ${finalGithubPath}`);
       }
       const ghCommits = await ghResponse.json();
 
@@ -424,13 +434,13 @@ async function startServer() {
         try {
           const ghToken = process.env.GITHUB_TOKEN;
           const ghUrl = ghToken 
-            ? `https://x-access-token:${ghToken}@github.com/${githubRepo}.git`
-            : `https://github.com/${githubRepo}.git`;
+            ? `https://x-access-token:${ghToken}@github.com/${finalGithubPath}.git`
+            : `https://github.com/${finalGithubPath}.git`;
           
-          const glUrl = `https://oauth2:${token}@gitlab.com/${targetPath}.git`;
+          const glUrl = `https://oauth2:${token}@gitlab.com/${finalGitlabPath}.git`;
 
           // Clone GitLab (dest)
-          console.log(`Cloning GitLab repo from ${targetPath}...`);
+          console.log(`Cloning GitLab repo from ${finalGitlabPath}...`);
           const cloneGl = spawnSync('git', ['clone', glUrl, 'repo'], { cwd: tempDir });
           
           const repoDir = path.join(tempDir, 'repo');
@@ -506,10 +516,10 @@ async function startServer() {
 
           res.json({
             success: true,
-            message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab (${targetPath}) using cherry-pick strategy.`,
+            message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab (${finalGitlabPath}) using cherry-pick strategy.`,
             commits: syncedCommits
           });
-          await logAudit("gitlab_repo_sync", { githubRepo, targetPath, commitCount: syncedCommits.length, strategy: 'cherry-pick' });
+          await logAudit("gitlab_repo_sync", { githubRepo: finalGithubPath, targetPath: finalGitlabPath, commitCount: syncedCommits.length, strategy: 'cherry-pick' });
 
       } finally {
         // Cleanup
@@ -1196,10 +1206,21 @@ run();
   });
 
   app.get("/api/config", (req, res) => {
+    const cleanPath = (raw: string | undefined, fallback: string) => {
+      if (!raw) return fallback;
+      return raw.includes('github.com/') || raw.includes('gitlab.com/')
+        ? raw.split(/github\.com\/|gitlab\.com\//)[1].replace(/\/$/, '').replace(/\.git$/, '')
+        : raw.replace(/^[^\/]*\//, (match) => match.includes('http') ? '' : match).replace(/\/$/, '');
+    };
+
+    const gitlabRepro = process.env.GITLAB_REPRO || "shengliangsong/gitflow-ai";
+    const githubRepo = process.env.GITHUB_REPO || "gitflow-queue";
+    const githubOwner = process.env.GITHUB_OWNER || "";
+
     res.json({
-      GITLAB_REPRO: process.env.GITLAB_REPRO || "shengliangsong/gitflow-ai",
-      GITHUB_OWNER: process.env.GITHUB_OWNER || "",
-      GITHUB_REPO: process.env.GITHUB_REPO || "gitflow-queue",
+      GITLAB_REPRO: cleanPath(gitlabRepro, "shengliangsong/gitflow-ai"),
+      GITHUB_OWNER: githubOwner,
+      GITHUB_REPO: cleanPath(githubRepo, "gitflow-queue"),
       APP_URL: process.env.APP_URL || ""
     });
   });
