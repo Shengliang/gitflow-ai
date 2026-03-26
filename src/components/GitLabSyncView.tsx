@@ -20,9 +20,22 @@ export const GitLabSyncView: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tokenMissing, setTokenMissing] = useState(false);
+  const [config, setConfig] = useState<any>(null);
 
   useEffect(() => {
-    // Check if token is likely missing by calling projects API
+    // Fetch config
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        setConfig(data);
+      } catch (e) {
+        console.error('Failed to fetch config:', e);
+      }
+    };
+    fetchConfig();
+
+    // Check if token is likely missing
     const checkToken = async () => {
       try {
         const res = await fetch('/api/gitlab/projects');
@@ -40,21 +53,24 @@ export const GitLabSyncView: React.FC = () => {
   const createRepo = async () => {
     setIsCreating(true);
     setError(null);
-    setLogs(prev => [...prev, '🔍 Checking GitLab for "shengliangsong/gitflow-ai"...']);
+    const gitlabPath = config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+    const repoName = gitlabPath.split('/').pop() || 'gitflow-ai';
+    
+    setLogs(prev => [...prev, `🔍 Checking GitLab for "${gitlabPath}"...`]);
     try {
       const response = await fetch('/api/gitlab/repo/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'gitflow-ai', description: 'GitFlow AI Hackathon Submission' })
+        body: JSON.stringify({ name: repoName, description: 'GitFlow AI Hackathon Submission' })
       });
       const data = await response.json();
       if (data.success) {
         setGitlabRepo(data.project);
         setRepoCreated(true);
         if (data.alreadyExists) {
-          setLogs(prev => [...prev, `ℹ️ GitLab repository "shengliangsong/gitflow-ai" already exists. ID: ${data.project.id}`]);
+          setLogs(prev => [...prev, `ℹ️ GitLab repository "${gitlabPath}" already exists. ID: ${data.project.id}`]);
         } else {
-          setLogs(prev => [...prev, `✅ GitLab repository "shengliangsong/gitflow-ai" created successfully. ID: ${data.project.id}`]);
+          setLogs(prev => [...prev, `✅ GitLab repository "${gitlabPath}" created successfully. ID: ${data.project.id}`]);
         }
       } else {
         const errMsg = data.error || 'Failed to create repository.';
@@ -72,15 +88,18 @@ export const GitLabSyncView: React.FC = () => {
     if (!repoCreated && !gitlabRepo) return;
     setIsSyncing(true);
     setSyncProgress(0);
-    setLogs(prev => [...prev, '🚀 Starting sync from GitHub (Shengliang/gitflow-ai) to GitLab (shengliangsong/gitflow-ai)...']);
+    const githubPath = `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`;
+    const gitlabPath = config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+    
+    setLogs(prev => [...prev, `🚀 Starting sync from GitHub (${githubPath}) to GitLab (${gitlabPath})...`]);
     
     try {
       const response = await fetch('/api/gitlab/repo/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          githubRepo: 'Shengliang/gitflow-ai', 
-          gitlabProjectId: gitlabRepo?.id || 'shengliangsong/gitflow-ai' 
+          githubRepo: githubPath, 
+          gitlabProjectId: gitlabRepo?.id || gitlabPath 
         })
       });
       const data = await response.json();
@@ -92,7 +111,7 @@ export const GitLabSyncView: React.FC = () => {
           await new Promise(r => setTimeout(r, 200));
         }
         setCommits(data.commits);
-        setLogs(prev => [...prev, `✅ Successfully synced ${data.commits.length} commits.`, '🔄 GitLab branch "master" updated.']);
+        setLogs(prev => [...prev, `✅ Successfully synced ${data.commits.length} commits.`, '🔄 GitLab repository updated.']);
       } else {
         setError(data.error || 'Failed to sync commits.');
       }
@@ -178,7 +197,7 @@ export const GitLabSyncView: React.FC = () => {
             {!repoCreated ? (
               <div className="space-y-4">
                 <p className="text-sm text-white/40 leading-relaxed">
-                  Create the <span className="text-orange-500 font-mono">shengliangsong/gitflow-ai</span> repository on GitLab to begin the synchronization process.
+                  Create the <span className="text-orange-500 font-mono">{config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai'}</span> repository on GitLab to begin the synchronization process.
                 </p>
                 <button
                   onClick={createRepo}
@@ -186,7 +205,7 @@ export const GitLabSyncView: React.FC = () => {
                   className="w-full py-4 bg-white text-black font-bold rounded-2xl hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 shadow-xl shadow-orange-500/10"
                 >
                   {isCreating ? <Loader2 size={20} className="animate-spin" /> : <Globe size={20} />}
-                  {isCreating ? 'Creating Repository...' : 'Create shengliangsong/gitflow-ai on GitLab'}
+                  {isCreating ? 'Creating Repository...' : `Create ${config?.GITLAB_REPRO?.split('/').pop() || 'gitflow-ai'} on GitLab`}
                 </button>
               </div>
             ) : (
@@ -194,8 +213,8 @@ export const GitLabSyncView: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Globe size={18} className="text-emerald-500" />
                   <div>
-                    <p className="text-xs font-bold text-white">gitflow-ai</p>
-                    <p className="text-[10px] text-white/40 font-mono">{gitlabRepo?.path_with_namespace || 'shengliangsong/gitflow-ai'}</p>
+                    <p className="text-xs font-bold text-white">{config?.GITLAB_REPRO?.split('/').pop() || 'gitflow-ai'}</p>
+                    <p className="text-[10px] text-white/40 font-mono">{gitlabRepo?.path_with_namespace || config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai'}</p>
                   </div>
                 </div>
                 <a 
@@ -228,12 +247,12 @@ export const GitLabSyncView: React.FC = () => {
               <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                 <div className="flex items-center gap-3">
                   <Github size={20} className="text-white/40" />
-                  <span className="text-sm font-mono text-white/60">Shengliang/gitflow-ai</span>
+                  <span className="text-sm font-mono text-white/60">{config?.GITHUB_OWNER || 'Shengliang'}/{config?.GITHUB_REPO || 'gitflow-ai'}</span>
                 </div>
                 <ArrowRight size={16} className="text-white/20" />
                 <div className="flex items-center gap-3">
                   <Globe size={20} className="text-orange-500" />
-                  <span className="text-sm font-mono text-white/60">shengliangsong/gitflow-ai</span>
+                  <span className="text-sm font-mono text-white/60">{config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai'}</span>
                 </div>
               </div>
 

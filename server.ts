@@ -3,6 +3,8 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import os from "os";
+import { spawnSync } from "child_process";
 import { Octokit } from "octokit";
 import dotenv from "dotenv";
 
@@ -78,6 +80,14 @@ async function startServer() {
     { id: '2', name: 'feature/ai-orchestrator', type: 'project', lastCommit: 'Add Gemini integration', status: 'active' },
     { id: '3', name: 'fix/merge-conflicts', type: 'project', lastCommit: 'Resolve binary tree issues', status: 'active' }
   ];
+
+  // Check for git availability
+  const gitCheck = spawnSync('git', ['--version']);
+  if (gitCheck.status === 0) {
+    console.log(`Git available: ${gitCheck.stdout.toString().trim()}`);
+  } else {
+    console.warn("Git NOT available in this environment. GitLab sync will fail.");
+  }
 
   app.use(express.json());
 
@@ -389,47 +399,128 @@ async function startServer() {
     }
 
     const { githubRepo, gitlabProjectId } = req.body;
-    // githubRepo: "Shengliang/gitflow-ai"
-    // gitlabProjectId: the ID of the newly created repo or provided ID
     
-    // Use GITLAB_REPRO as destination if provided and no project ID is given
     const finalGitlabDest = String(gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai');
     
     // Extract path if it's a full URL
     const targetPath = finalGitlabDest.includes('gitlab.com/') 
-      ? finalGitlabDest.split('gitlab.com/')[1].replace(/\/$/, '')
+      ? finalGitlabDest.split('gitlab.com/')[1].replace(/\/$/, '').replace(/\.git$/, '')
       : finalGitlabDest;
 
     try {
       console.log(`Syncing commits from GitHub ${githubRepo} to GitLab ${targetPath}...`);
       
-      // 1. Fetch commits from GitHub
+      // 1. Fetch commits from GitHub to show in the response
       const ghResponse = await fetch(`https://api.github.com/repos/${githubRepo}/commits?per_page=10`);
       if (!ghResponse.ok) {
         throw new Error(`GitHub API error: ${ghResponse.statusText}`);
       }
       const ghCommits = await ghResponse.json();
 
-      // 2. For each commit, we "cherry-pick" it to GitLab
-      // In a real scenario, this would involve git commands. 
-      // Here we simulate it by creating commits via GitLab API if they don't exist.
-      // For the demo, we'll just return the list of "synced" commits.
-      
-      const syncedCommits = ghCommits.map((c: any) => ({
-        id: c.sha,
-        message: c.commit.message,
-        author: c.commit.author.name,
-        date: c.commit.author.date,
-        status: 'synced'
-      }));
+        // 2. Real Git Sync (Cherry-pick strategy)
+        const tempDir = path.join(os.tmpdir(), `git-sync-${Date.now()}`);
+        fs.mkdirSync(tempDir, { recursive: true });
 
-      res.json({
-        success: true,
-        message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab (${targetPath}).`,
-        commits: syncedCommits
-      });
-      await logAudit("gitlab_repo_sync", { githubRepo, targetPath, commitCount: syncedCommits.length });
+        try {
+          const ghToken = process.env.GITHUB_TOKEN;
+          const ghUrl = ghToken 
+            ? `https://x-access-token:${ghToken}@github.com/${githubRepo}.git`
+            : `https://github.com/${githubRepo}.git`;
+          
+          const glUrl = `https://oauth2:${token}@gitlab.com/${targetPath}.git`;
+
+          // Clone GitLab (dest)
+          console.log(`Cloning GitLab repo from ${targetPath}...`);
+          const cloneGl = spawnSync('git', ['clone', glUrl, 'repo'], { cwd: tempDir });
+          
+          const repoDir = path.join(tempDir, 'repo');
+          if (!fs.existsSync(repoDir)) {
+            // If clone failed, maybe it's an empty repo. Try to init.
+            fs.mkdirSync(repoDir, { recursive: true });
+            spawnSync('git', ['init'], { cwd: repoDir });
+            spawnSync('git', ['remote', 'add', 'origin', glUrl], { cwd: repoDir });
+          }
+
+          // Configure git user
+          spawnSync('git', ['config', 'user.email', 'gitflow-ai@example.com'], { cwd: repoDir });
+          spawnSync('git', ['config', 'user.name', 'GitFlow AI Orchestrator'], { cwd: repoDir });
+
+          // Add GitHub (source) as remote
+          spawnSync('git', ['remote', 'add', 'github', ghUrl], { cwd: repoDir });
+          
+          // Fetch GitHub
+          console.log("Fetching from GitHub...");
+          spawnSync('git', ['fetch', 'github'], { cwd: repoDir });
+
+          // Determine branch (main or master)
+          let branch = 'main';
+          const remoteMain = spawnSync('git', ['ls-remote', '--heads', 'github', 'main'], { cwd: repoDir });
+          if (!remoteMain.stdout.toString().includes('refs/heads/main')) {
+            branch = 'master';
+          }
+
+          // Check if local branch exists
+          const checkBranch = spawnSync('git', ['rev-parse', '--verify', branch], { cwd: repoDir });
+          if (checkBranch.status !== 0) {
+            // Local branch doesn't exist (likely empty repo). Create it from github.
+            console.log(`Creating local branch ${branch} from github/${branch}...`);
+            spawnSync('git', ['checkout', '-b', branch, `github/${branch}`], { cwd: repoDir });
+            // Initial push
+            const initialPush = spawnSync('git', ['push', '-u', 'origin', branch], { cwd: repoDir });
+            if (initialPush.status !== 0) {
+              throw new Error(`Initial push failed: ${initialPush.stderr.toString()}`);
+            }
+          } else {
+            // Local branch exists. Find missing commits.
+            console.log(`Finding missing commits for ${branch}...`);
+            const log = spawnSync('git', ['log', `HEAD..github/${branch}`, '--reverse', '--format=%H'], { cwd: repoDir });
+            const commitHashes = log.stdout.toString().split('\n').filter(h => h.trim() !== '');
+
+            if (commitHashes.length > 0) {
+              console.log(`Cherry-picking ${commitHashes.length} commits...`);
+              for (const hash of commitHashes) {
+                const cp = spawnSync('git', ['cherry-pick', hash], { cwd: repoDir });
+                if (cp.status !== 0) {
+                  spawnSync('git', ['cherry-pick', '--abort'], { cwd: repoDir });
+                  throw new Error(`Cherry-pick failed for commit ${hash}: ${cp.stderr.toString()}`);
+                }
+              }
+              // Push to GitLab
+              console.log("Pushing to GitLab...");
+              const push = spawnSync('git', ['push', 'origin', branch], { cwd: repoDir });
+              if (push.status !== 0) {
+                throw new Error(`Git push failed: ${push.stderr.toString()}`);
+              }
+            } else {
+              console.log("No new commits to sync.");
+            }
+          }
+
+          const syncedCommits = ghCommits.map((c: any) => ({
+            id: c.sha,
+            message: c.commit.message,
+            author: c.commit.author.name,
+            date: c.commit.author.date,
+            status: 'synced'
+          }));
+
+          res.json({
+            success: true,
+            message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab (${targetPath}) using cherry-pick strategy.`,
+            commits: syncedCommits
+          });
+          await logAudit("gitlab_repo_sync", { githubRepo, targetPath, commitCount: syncedCommits.length, strategy: 'cherry-pick' });
+
+      } finally {
+        // Cleanup
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch (e) {
+          console.error("Failed to cleanup temp dir:", e);
+        }
+      }
     } catch (error: any) {
+      console.error("Sync error:", error);
       res.status(500).json({ error: error.message });
     }
   });
