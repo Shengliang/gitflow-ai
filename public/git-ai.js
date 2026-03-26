@@ -8,7 +8,7 @@ const os = require('os');
 
 // This is a static version of the CLI script. 
 // If you download this directly from GitHub, you MUST set your APP_URL.
-const DEFAULT_APP_URL = "https://gitflow-ai-600965458720.us-west1.run.app"; 
+const DEFAULT_APP_URL = "https://ais-dev-kxsusitd3wvrmxfiakdr7o-97597776023.us-west1.run.app"; 
 const VERSION = "1.0.0";
 const CONFIG_FILE = path.join(os.homedir(), '.git-ai-config.json');
 const args = process.argv.slice(2);

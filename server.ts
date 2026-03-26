@@ -14,9 +14,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
-const GITHUB_REPO = process.env.GITHUB_REPO || "gitflow-queue";
-const GITHUB_AUDIT_REPO = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
+
+// Robustly parse GitHub configuration
+const parseGitHubConfig = () => {
+  const ownerRaw = process.env.GITHUB_OWNER || "";
+  const repoRaw = process.env.GITHUB_REPO || "gitflow-queue";
+  const auditRaw = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
+
+  const cleanRepo = getCleanRepoPath(repoRaw, "gitflow-queue");
+  const cleanAudit = getCleanRepoPath(auditRaw, "gitflow-audit");
+
+  const [rOwner, rName] = cleanRepo.includes('/') ? cleanRepo.split('/') : [ownerRaw, cleanRepo];
+  const [aOwner, aName] = cleanAudit.includes('/') ? cleanAudit.split('/') : [ownerRaw, cleanAudit];
+
+  return {
+    owner: rOwner || aOwner || ownerRaw,
+    repo: rName,
+    auditRepo: aName,
+    auditOwner: aOwner || rOwner || ownerRaw
+  };
+};
+
+const githubConfig = parseGitHubConfig();
+const GITHUB_OWNER = githubConfig.owner;
+const GITHUB_REPO = githubConfig.repo;
+const GITHUB_AUDIT_REPO = githubConfig.auditRepo;
+const GITHUB_AUDIT_OWNER = githubConfig.auditOwner;
 
 const getCleanRepoPath = (raw: any, fallback: string): string => {
   if (raw === undefined || raw === null || raw === "") return fallback;
@@ -74,19 +97,35 @@ async function updateFileContent(owner: string, repo: string, path: string, cont
 }
 
 async function logAudit(action: string, details: any) {
-  if (!GITHUB_OWNER || !GITHUB_AUDIT_REPO) return;
+  if (!GITHUB_OWNER || !GITHUB_AUDIT_REPO || !process.env.GITHUB_TOKEN) return;
   
   const timestamp = new Date().toISOString();
   const fileName = `audit-${timestamp.split('T')[0]}.json`;
   const path = `logs/${fileName}`;
   
   try {
-    const { content, sha } = await getFileContent(GITHUB_OWNER, GITHUB_AUDIT_REPO, path);
-    const logs = content || [];
-    logs.push({ timestamp, action, details });
-    await updateFileContent(GITHUB_OWNER, GITHUB_AUDIT_REPO, path, logs, sha);
-  } catch (error) {
-    console.error("Failed to log audit to GitHub:", error);
+    // Try to log to audit repo first
+    try {
+      const { content, sha } = await getFileContent(GITHUB_AUDIT_OWNER, GITHUB_AUDIT_REPO, path);
+      const logs = content || [];
+      logs.push({ timestamp, action, details });
+      await updateFileContent(GITHUB_AUDIT_OWNER, GITHUB_AUDIT_REPO, path, logs, sha);
+    } catch (error: any) {
+      // If audit repo is missing (404), fallback to main repo
+      if (error.status === 404 && GITHUB_REPO && GITHUB_REPO !== GITHUB_AUDIT_REPO) {
+        const { content, sha } = await getFileContent(GITHUB_OWNER, GITHUB_REPO, path);
+        const logs = content || [];
+        logs.push({ timestamp, action, details });
+        await updateFileContent(GITHUB_OWNER, GITHUB_REPO, path, logs, sha);
+      } else {
+        throw error;
+      }
+    }
+  } catch (error: any) {
+    // Only log non-404 errors to avoid cluttering when repos are missing
+    if (error.status !== 404) {
+      console.error("Failed to log audit to GitHub:", error.message);
+    }
   }
 }
 
@@ -157,14 +196,9 @@ async function startServer() {
     }
   };
 
-  // Initial sync
-  await syncQueueWithGitHub();
-  await syncBranchesWithGitHub();
-
   // API Routes
   app.get("/api/merge-queue", async (req, res) => {
     try {
-      await syncQueueWithGitHub();
       res.json(mergeQueue);
     } catch (error) {
       console.error("Error fetching merge queue:", error);
@@ -174,11 +208,22 @@ async function startServer() {
 
   app.get("/api/branches", async (req, res) => {
     try {
-      await syncBranchesWithGitHub();
       res.json(branches);
     } catch (error) {
       console.error("Error fetching branches:", error);
       res.status(500).json({ error: "Failed to fetch branches" });
+    }
+  });
+
+  app.post("/api/github/sync", async (req, res) => {
+    try {
+      console.log("🔄 Manual sync triggered from UI...");
+      await syncQueueWithGitHub();
+      await syncBranchesWithGitHub();
+      res.json({ success: true, message: "State synchronized with GitHub" });
+    } catch (error: any) {
+      console.error("Manual sync failed:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -496,7 +541,26 @@ async function startServer() {
       const finalGithubPath = getCleanRepoPath(githubRepo || `${GITHUB_OWNER}/${GITHUB_REPO}`, "shengliangsong/gitflow-ai");
 
       // Robustly parse GitLab Repo
-      const finalGitlabPath = getCleanRepoPath(gitlabProjectId || process.env.GITLAB_REPRO, "shengliangsong/gitflow-ai");
+      let finalGitlabPath = getCleanRepoPath(gitlabProjectId || process.env.GITLAB_REPRO, "shengliangsong/gitflow-ai");
+
+      // If it's a numeric ID, resolve it to path_with_namespace
+      if (/^\d+$/.test(finalGitlabPath)) {
+        console.log(`🔍 Resolving GitLab project ID ${finalGitlabPath} to path...`);
+        try {
+          const projectRes = await fetch(`https://gitlab.com/api/v4/projects/${finalGitlabPath}`, {
+            headers: { "PRIVATE-TOKEN": token }
+          });
+          if (projectRes.ok) {
+            const projectData = await projectRes.json();
+            if (projectData.path_with_namespace) {
+              finalGitlabPath = projectData.path_with_namespace;
+              console.log(`✅ Resolved to ${finalGitlabPath}`);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to resolve GitLab project ID:", err);
+        }
+      }
 
       console.log(`🚀 Starting sync from GitHub (${finalGithubPath}) to GitLab (${finalGitlabPath})...`);
       

@@ -107,6 +107,34 @@ export default function App() {
     testSuccessRate: 98.5,
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleSyncGitHub = async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch('/api/github/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncMessage('Successfully synced with GitHub');
+        // Refresh local state
+        const qRes = await fetch('/api/merge-queue');
+        const bRes = await fetch('/api/branches');
+        if (qRes.ok) setQueue(await qRes.json());
+        if (bRes.ok) setBranches(await bRes.json());
+      } else {
+        setError(data.error || 'Failed to sync with GitHub');
+      }
+    } catch (err) {
+      console.error('Error syncing with GitHub:', err);
+      setError('Network error during GitHub sync');
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncMessage(null), 3000);
+    }
+  };
+
   useEffect(() => {
     // Mock auth readiness
     const savedUser = localStorage.getItem('gitflow_user');
@@ -615,6 +643,20 @@ export default function App() {
 
       <div className="flex-1 flex flex-col min-w-0 relative">
         <main className="flex-1 p-8 overflow-y-auto">
+          <AnimatePresence>
+            {syncMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, x: '-50%' }}
+                animate={{ opacity: 1, y: 0, x: '-50%' }}
+                exit={{ opacity: 0, y: -20, x: '-50%' }}
+                className="fixed top-8 left-1/2 z-50 bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-3"
+              >
+                <ShieldCheck size={20} />
+                {syncMessage}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <header className="flex justify-between items-center mb-12">
             <div>
               <h1 className="text-4xl font-bold tracking-tight mb-2">
@@ -624,6 +666,18 @@ export default function App() {
             </div>
             
             <div className="flex gap-4">
+              {activeTab === 'dashboard' && (
+                <button
+                  onClick={handleSyncGitHub}
+                  disabled={isSyncing}
+                  className={`bg-white/5 border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-3 hover:bg-white/10 transition-all ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <RefreshCw className={isSyncing ? 'animate-spin text-orange-500' : 'text-white/40'} size={18} />
+                  <span className="text-xs font-bold text-white">
+                    {isSyncing ? 'Syncing...' : 'Sync from GitHub'}
+                  </span>
+                </button>
+              )}
               <div className="bg-white/5 border border-white/10 rounded-2xl px-6 py-3 flex items-center gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold overflow-hidden">

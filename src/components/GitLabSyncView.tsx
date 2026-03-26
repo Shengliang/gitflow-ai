@@ -89,7 +89,7 @@ export const GitLabSyncView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           githubRepo: githubPath, 
-          gitlabProjectId: gitlabRepo?.id || gitlabPath 
+          gitlabProjectId: gitlabRepo?.path_with_namespace || gitlabPath 
         })
       });
       

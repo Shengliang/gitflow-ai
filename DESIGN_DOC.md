@@ -5,7 +5,7 @@ GitFlow AI is an intelligent orchestration layer for complex Git workflows. It s
 
 ## 2. System Architecture
 - **Frontend**: React + Tailwind CSS (Vite)
-- **Real-time Sync**: GitHub API for live merge queue and branch status.
+- **Real-time Sync**: GitHub API (`Shengliang/gitflow-ai`) for live merge queue and branch status.
 - **AI Engine**: Gemini 3.1 Pro for semantic analysis and code review.
 - **State Management**: React Context for global orchestration state.
 
@@ -114,4 +114,4 @@ When performing cross-platform merges, the AI Engine automatically translates be
 ## 7. Security & Safety
 - **Staging Branches**: All merges are tested in temporary staging branches before hitting Master.
 - **No Force-Pushes**: The system uses clean rebase/merge cycles to maintain a linear, readable history.
-- **Audit Logs**: Every AI decision is logged in a dedicated GitHub audit repository for human review.
+- **Audit Logs**: Every AI decision is logged in a dedicated GitHub audit repository (`Shengliang/gitflow-ai-audit`) for human review.
