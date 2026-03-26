@@ -20,6 +20,7 @@ export const GitLabSyncView: React.FC = () => {
   const [tokenMissing, setTokenMissing] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [forceSync, setForceSync] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -89,7 +90,8 @@ export const GitLabSyncView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           githubRepo: githubPath, 
-          gitlabProjectId: gitlabRepo?.path_with_namespace || gitlabPath 
+          gitlabProjectId: gitlabRepo?.path_with_namespace || gitlabPath,
+          force: forceSync
         })
       });
       
@@ -228,6 +230,24 @@ export const GitLabSyncView: React.FC = () => {
                     {cleanPath(config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai', 'shengliangsong/gitflow-ai')}
                   </span>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${forceSync ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/20'}`}>
+                    <AlertTriangle size={16} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white uppercase tracking-widest">Force Sync Mode</p>
+                    <p className="text-[10px] text-white/40">Resolve conflicts by favoring GitHub (uses -X theirs)</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setForceSync(!forceSync)}
+                  className={`w-10 h-5 rounded-full relative transition-colors ${forceSync ? 'bg-rose-500' : 'bg-white/10'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${forceSync ? 'right-1' : 'left-1'}`}></div>
+                </button>
               </div>
 
               <button
