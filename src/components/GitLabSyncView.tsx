@@ -88,10 +88,10 @@ export const GitLabSyncView: React.FC = () => {
     if (!repoCreated && !gitlabRepo) return;
     setIsSyncing(true);
     setSyncProgress(0);
-    const githubPath = config?.GITHUB_REPO?.includes('/') 
+    const githubPath = cleanPath(config?.GITHUB_REPO?.includes('/') 
       ? config.GITHUB_REPO 
-      : `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`;
-    const gitlabPath = config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+      : `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`, 'shengliangsong/gitflow-ai');
+    const gitlabPath = cleanPath(config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai', 'shengliangsong/gitflow-ai');
     
     setLogs(prev => [...prev, `🚀 Starting sync from GitHub (${githubPath}) to GitLab (${gitlabPath})...`]);
     
@@ -250,15 +250,15 @@ export const GitLabSyncView: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Github size={20} className="text-white/40" />
                   <span className="text-sm font-mono text-white/60">
-                    {config?.GITHUB_REPO?.includes('/') 
+                    {cleanPath(config?.GITHUB_REPO?.includes('/') 
                       ? config.GITHUB_REPO 
-                      : `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`}
+                      : `${config?.GITHUB_OWNER || 'Shengliang'}/${config?.GITHUB_REPO || 'gitflow-ai'}`, 'shengliangsong/gitflow-ai')}
                   </span>
                 </div>
                 <ArrowRight size={16} className="text-white/20" />
                 <div className="flex items-center gap-3">
                   <Globe size={20} className="text-orange-500" />
-                  <span className="text-sm font-mono text-white/60">{config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai'}</span>
+                  <span className="text-sm font-mono text-white/60">{cleanPath(config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai', 'shengliangsong/gitflow-ai')}</span>
                 </div>
               </div>
 
@@ -355,4 +355,20 @@ export const GitLabSyncView: React.FC = () => {
       </div>
     </div>
   );
+};
+
+const cleanPath = (raw: string | undefined, fallback: string) => {
+  if (!raw) return fallback;
+  const urlMatch = raw.match(/https?:\/\/(?:github|gitlab)\.com\/([^\s]+)/);
+  if (urlMatch) {
+    return urlMatch[1].replace(/\/$/, '').replace(/\.git$/, '');
+  }
+  if (raw.includes('/')) {
+    const parts = raw.split('/');
+    if (parts[1] && parts[1].startsWith('http')) {
+      return cleanPath(raw.substring(parts[0].length + 1), fallback);
+    }
+    return raw.replace(/\/$/, '');
+  }
+  return raw;
 };

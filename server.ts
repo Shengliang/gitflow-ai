@@ -18,6 +18,26 @@ const GITHUB_OWNER = process.env.GITHUB_OWNER || "";
 const GITHUB_REPO = process.env.GITHUB_REPO || "gitflow-queue";
 const GITHUB_AUDIT_REPO = process.env.GITHUB_AUDIT_REPO || "gitflow-audit";
 
+const getCleanRepoPath = (raw: string | undefined, fallback: string) => {
+  if (!raw) return fallback;
+  // Handle cases like "Owner/https://github.com/Owner/Repo"
+  const urlMatch = raw.match(/https?:\/\/(?:github|gitlab)\.com\/([^\s]+)/);
+  if (urlMatch) {
+    return urlMatch[1].replace(/\/$/, '').replace(/\.git$/, '');
+  }
+  // Handle cases like "Owner/Repo" or "Repo"
+  if (raw.includes('/')) {
+    // If it has a slash but no http, it might be "owner/repo"
+    // but we should still check if it has a leading "owner/http" mess
+    const parts = raw.split('/');
+    if (parts[1] && parts[1].startsWith('http')) {
+      return getCleanRepoPath(raw.substring(parts[0].length + 1), fallback);
+    }
+    return raw.replace(/\/$/, '');
+  }
+  return raw;
+};
+
 async function getFileContent(owner: string, repo: string, path: string) {
   try {
     const { data } = await octokit.rest.repos.getContent({
@@ -401,29 +421,20 @@ async function startServer() {
     const { githubRepo, gitlabProjectId } = req.body;
     
     // Robustly parse GitHub Repo
-    const rawGithub = String(githubRepo || `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}`);
-    const githubPath = rawGithub.includes('github.com/') 
-      ? rawGithub.split('github.com/')[1].replace(/\/$/, '').replace(/\.git$/, '')
-      : rawGithub.replace(/^[^\/]*\//, (match) => match.includes('http') ? '' : match).replace(/\/$/, '');
-    
-    // Clean up if it still has a leading slash or is just the repo name
-    const finalGithubPath = githubPath.startsWith('/') ? githubPath.substring(1) : githubPath;
+    const finalGithubPath = getCleanRepoPath(githubRepo || `${GITHUB_OWNER}/${GITHUB_REPO}`, "shengliangsong/gitflow-ai");
 
     // Robustly parse GitLab Repo
-    const rawGitlab = String(gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai');
-    const gitlabPath = rawGitlab.includes('gitlab.com/') 
-      ? rawGitlab.split('gitlab.com/')[1].replace(/\/$/, '').replace(/\.git$/, '')
-      : rawGitlab.replace(/\/$/, '');
-    
-    const finalGitlabPath = gitlabPath.startsWith('/') ? gitlabPath.substring(1) : gitlabPath;
+    const finalGitlabPath = getCleanRepoPath(gitlabProjectId || process.env.GITLAB_REPRO, "shengliangsong/gitflow-ai");
 
     try {
-      console.log(`Syncing commits from GitHub ${finalGithubPath} to GitLab ${finalGitlabPath}...`);
+      console.log(`🚀 Starting sync from GitHub (${finalGithubPath}) to GitLab (${finalGitlabPath})...`);
       
       // 1. Fetch commits from GitHub to show in the response
-      const ghResponse = await fetch(`https://api.github.com/repos/${finalGithubPath}/commits?per_page=10`);
+      const ghApiUrl = `https://api.github.com/repos/${finalGithubPath}/commits?per_page=10`;
+      console.log(`🔍 Fetching GitHub commits from: ${ghApiUrl}`);
+      const ghResponse = await fetch(ghApiUrl);
       if (!ghResponse.ok) {
-        throw new Error(`GitHub API error: ${ghResponse.statusText} for ${finalGithubPath}`);
+        throw new Error(`GitHub API error: ${ghResponse.statusText} for ${finalGithubPath} (URL: ${ghApiUrl})`);
       }
       const ghCommits = await ghResponse.json();
 
@@ -1206,21 +1217,18 @@ run();
   });
 
   app.get("/api/config", (req, res) => {
-    const cleanPath = (raw: string | undefined, fallback: string) => {
-      if (!raw) return fallback;
-      return raw.includes('github.com/') || raw.includes('gitlab.com/')
-        ? raw.split(/github\.com\/|gitlab\.com\//)[1].replace(/\/$/, '').replace(/\.git$/, '')
-        : raw.replace(/^[^\/]*\//, (match) => match.includes('http') ? '' : match).replace(/\/$/, '');
-    };
+    const gitlabReproRaw = process.env.GITLAB_REPRO;
+    const githubRepoRaw = process.env.GITHUB_REPO;
+    const githubOwnerRaw = process.env.GITHUB_OWNER;
 
-    const gitlabRepro = process.env.GITLAB_REPRO || "shengliangsong/gitflow-ai";
-    const githubRepo = process.env.GITHUB_REPO || "gitflow-queue";
-    const githubOwner = process.env.GITHUB_OWNER || "";
+    const gitlabRepro = getCleanRepoPath(gitlabReproRaw, "shengliangsong/gitflow-ai");
+    const githubRepo = getCleanRepoPath(githubRepoRaw, "gitflow-queue");
+    const githubOwner = githubOwnerRaw || "";
 
     res.json({
-      GITLAB_REPRO: cleanPath(gitlabRepro, "shengliangsong/gitflow-ai"),
+      GITLAB_REPRO: gitlabRepro,
       GITHUB_OWNER: githubOwner,
-      GITHUB_REPO: cleanPath(githubRepo, "gitflow-queue"),
+      GITHUB_REPO: githubRepo,
       APP_URL: process.env.APP_URL || ""
     });
   });
