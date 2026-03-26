@@ -132,13 +132,21 @@ async function startServer() {
 
   // API Routes
   app.get("/api/merge-queue", async (req, res) => {
-    await syncQueueWithGitHub();
-    res.json(mergeQueue);
+    try {
+      await syncQueueWithGitHub();
+      res.json(mergeQueue);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch merge queue" });
+    }
   });
 
   app.get("/api/branches", async (req, res) => {
-    await syncBranchesWithGitHub();
-    res.json(branches);
+    try {
+      await syncBranchesWithGitHub();
+      res.json(branches);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch branches" });
+    }
   });
 
   app.post("/api/branches", async (req, res) => {
@@ -274,10 +282,11 @@ async function startServer() {
 
   app.post("/api/git/sync", async (req, res) => {
     const { destRepo, sourceRepos } = req.body;
-    console.log(`AI orchestrating sync from [${sourceRepos.join(', ')}] to ${destRepo}...`);
+    const finalDestRepo = destRepo || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+    console.log(`AI orchestrating sync from [${sourceRepos.join(', ')}] to ${finalDestRepo}...`);
     res.json({
       success: true,
-      message: `Successfully synchronized ${sourceRepos.length} source repositories to ${destRepo}.`,
+      message: `Successfully synchronized ${sourceRepos.length} source repositories to ${finalDestRepo}.`,
       details: sourceRepos.map(s => ({ repo: s, status: 'synced', commits: Math.floor(Math.random() * 10) }))
     });
   });
@@ -379,10 +388,18 @@ async function startServer() {
 
     const { githubRepo, gitlabProjectId } = req.body;
     // githubRepo: "Shengliang/gitflow-ai"
-    // gitlabProjectId: the ID of the newly created repo
+    // gitlabProjectId: the ID of the newly created repo or provided ID
+    
+    // Use GITLAB_REPRO as destination if provided and no project ID is given
+    const finalGitlabDest = gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+    
+    // Extract path if it's a full URL
+    const targetPath = finalGitlabDest.includes('gitlab.com/') 
+      ? finalGitlabDest.split('gitlab.com/')[1].replace(/\/$/, '')
+      : finalGitlabDest;
 
     try {
-      console.log(`Syncing commits from GitHub ${githubRepo} to GitLab ${gitlabProjectId}...`);
+      console.log(`Syncing commits from GitHub ${githubRepo} to GitLab ${targetPath}...`);
       
       // 1. Fetch commits from GitHub
       const ghResponse = await fetch(`https://api.github.com/repos/${githubRepo}/commits?per_page=10`);
@@ -406,10 +423,10 @@ async function startServer() {
 
       res.json({
         success: true,
-        message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab.`,
+        message: `Successfully synced ${syncedCommits.length} commits from GitHub to GitLab (${targetPath}).`,
         commits: syncedCommits
       });
-      await logAudit("gitlab_repo_sync", { githubRepo, gitlabProjectId, commitCount: syncedCommits.length });
+      await logAudit("gitlab_repo_sync", { githubRepo, targetPath, commitCount: syncedCommits.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -734,6 +751,7 @@ const path = require('path');
 const os = require('os');
 
 const DEFAULT_APP_URL = "${appUrl}";
+const GITLAB_REPRO = "${process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai'}";
 const VERSION = "1.0.0";
 const CONFIG_FILE = path.join(os.homedir(), '.git-ai-config.json');
 const args = process.argv.slice(2);
@@ -961,10 +979,20 @@ async function run() {
       }
     }
   } else if (command === 'sync') {
-    const destRepo = args[1];
-    const sourceRepos = args.slice(2);
+    let destRepo = args[1];
+    let sourceRepos = args.slice(2);
+    
+    // Use GITLAB_REPRO if it's set and only one repo (source) is provided
+    if (GITLAB_REPRO && sourceRepos.length === 0 && destRepo) {
+      sourceRepos = [destRepo];
+      destRepo = GITLAB_REPRO;
+    }
+
     if (!destRepo || sourceRepos.length === 0) {
       console.error('Error: git-ai sync <dest_repo> <source_repo1> [source_repo2] ...');
+      if (GITLAB_REPRO) {
+        console.log('Usage with default destination: git-ai sync <source_repo1> [source_repo2] ...');
+      }
       return;
     }
     console.log('🔄 AI orchestrating sync from ' + sourceRepos.length + ' sources to ' + destRepo + '...');
@@ -1072,6 +1100,15 @@ run();
 `;
     res.setHeader('Content-Type', 'application/javascript');
     res.send(cliScript);
+  });
+
+  app.get("/api/config", (req, res) => {
+    res.json({
+      GITLAB_REPRO: process.env.GITLAB_REPRO || "shengliangsong/gitflow-ai",
+      GITHUB_OWNER: process.env.GITHUB_OWNER || "",
+      GITHUB_REPO: process.env.GITHUB_REPO || "gitflow-queue",
+      APP_URL: process.env.APP_URL || ""
+    });
   });
 
   // Vite middleware for development

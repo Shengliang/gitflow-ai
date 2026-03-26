@@ -219,6 +219,7 @@ export const DemoView: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isFromCache, setIsFromCache] = useState(false);
+  const [isAnyCached, setIsAnyCached] = useState(false);
   const [isAutoAdvance, setIsAutoAdvance] = useState(true);
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -234,6 +235,21 @@ export const DemoView: React.FC = () => {
     "We've also launched a powerful Local CLI SDK. It's a terminal-first experience that wraps standard Git commands. Whether you're cherry-picking complex ranges, resolving conflicts with AI, or managing the global merge queue, you can do it all from your terminal. It even supports cost-saving benchmark modes, allowing teams to verify their integrations with or without Gemini tokens. This bridges the gap between our web orchestrator and your local development environment.",
     "Looking ahead, our Version 2 roadmap is even more ambitious. We are building predictive conflict detection that identifies issues before a pull request is even opened. We're also developing AI-driven capacity planning to optimize team assignments based on code density and complexity. By integrating predictive CI, we'll run only the tests that matter for a specific change, further accelerating the delivery pipeline. We are redefining software delivery with GitFlow AI. Thank you for joining us, and thanks for judging."
   ];
+
+  useEffect(() => {
+    const checkCache = async () => {
+      try {
+        const firstSlideKey = `slide_0_${slideScripts[0].length}`;
+        const cached = await getCachedAudio(firstSlideKey);
+        if (cached) {
+          setIsAnyCached(true);
+        }
+      } catch (e) {
+        console.warn('Failed to check cache:', e);
+      }
+    };
+    checkCache();
+  }, []);
 
   const stopAudio = () => {
     if (audioSourceRef.current) {
@@ -582,13 +598,21 @@ export const DemoView: React.FC = () => {
           
           <div className="flex justify-center gap-4">
             {!isPresenting ? (
-              <button 
-                onClick={startPresentation}
-                className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
-              >
-                <Play size={20} className="group-hover:scale-110 transition-transform" />
-                Start Presentation
-              </button>
+              <div className="flex flex-col items-center gap-4">
+                <button 
+                  onClick={startPresentation}
+                  className="flex items-center gap-3 bg-orange-500 text-white px-8 py-4 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 group"
+                >
+                  <Play size={20} className="group-hover:scale-110 transition-transform" />
+                  Start Presentation
+                </button>
+                {isAnyCached && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                    <Zap size={14} className="text-emerald-500" />
+                    <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Running from IndexedDB Cache</span>
+                  </div>
+                )}
+              </div>
             ) : (
               <button 
                 onClick={stopPresentation}
@@ -639,10 +663,10 @@ export const DemoView: React.FC = () => {
                     )}
                     {audioError && (
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full border border-red-500/20">
                           <AlertCircle size={12} className="text-red-500" />
                           <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest" title={audioError}>
-                            {audioError.includes('Quota') ? 'Gemini API Quota (429)' : 'Audio Error'}
+                            {audioError.includes('Quota') || audioError.includes('429') ? 'Gemini API Quota (429)' : audioError}
                           </span>
                         </div>
                         <button 

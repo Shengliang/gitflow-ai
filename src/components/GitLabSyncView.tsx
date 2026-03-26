@@ -40,7 +40,7 @@ export const GitLabSyncView: React.FC = () => {
   const createRepo = async () => {
     setIsCreating(true);
     setError(null);
-    setLogs(prev => [...prev, '🔍 Checking GitLab for existing repository...']);
+    setLogs(prev => [...prev, '🔍 Checking GitLab for "shengliangsong/gitflow-ai"...']);
     try {
       const response = await fetch('/api/gitlab/repo/create', {
         method: 'POST',
@@ -52,9 +52,9 @@ export const GitLabSyncView: React.FC = () => {
         setGitlabRepo(data.project);
         setRepoCreated(true);
         if (data.alreadyExists) {
-          setLogs(prev => [...prev, `ℹ️ GitLab repository "gitflow-ai" already exists. ID: ${data.project.id}`]);
+          setLogs(prev => [...prev, `ℹ️ GitLab repository "shengliangsong/gitflow-ai" already exists. ID: ${data.project.id}`]);
         } else {
-          setLogs(prev => [...prev, `✅ GitLab repository "gitflow-ai" created successfully. ID: ${data.project.id}`]);
+          setLogs(prev => [...prev, `✅ GitLab repository "shengliangsong/gitflow-ai" created successfully. ID: ${data.project.id}`]);
         }
       } else {
         const errMsg = data.error || 'Failed to create repository.';
@@ -72,7 +72,7 @@ export const GitLabSyncView: React.FC = () => {
     if (!repoCreated && !gitlabRepo) return;
     setIsSyncing(true);
     setSyncProgress(0);
-    setLogs(prev => [...prev, '🚀 Starting sync from GitHub (Shengliang/gitflow-ai) to GitLab...']);
+    setLogs(prev => [...prev, '🚀 Starting sync from GitHub (Shengliang/gitflow-ai) to GitLab (shengliangsong/gitflow-ai)...']);
     
     try {
       const response = await fetch('/api/gitlab/repo/sync', {
@@ -80,7 +80,7 @@ export const GitLabSyncView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           githubRepo: 'Shengliang/gitflow-ai', 
-          gitlabProjectId: gitlabRepo?.id || 'gitflow-ai' 
+          gitlabProjectId: gitlabRepo?.id || 'shengliangsong/gitflow-ai' 
         })
       });
       const data = await response.json();
@@ -178,7 +178,7 @@ export const GitLabSyncView: React.FC = () => {
             {!repoCreated ? (
               <div className="space-y-4">
                 <p className="text-sm text-white/40 leading-relaxed">
-                  Create the <span className="text-orange-500 font-mono">gitflow-ai</span> repository on GitLab to begin the synchronization process.
+                  Create the <span className="text-orange-500 font-mono">shengliangsong/gitflow-ai</span> repository on GitLab to begin the synchronization process.
                 </p>
                 <button
                   onClick={createRepo}
@@ -186,7 +186,7 @@ export const GitLabSyncView: React.FC = () => {
                   className="w-full py-4 bg-white text-black font-bold rounded-2xl hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 shadow-xl shadow-orange-500/10"
                 >
                   {isCreating ? <Loader2 size={20} className="animate-spin" /> : <Globe size={20} />}
-                  {isCreating ? 'Creating Repository...' : 'Create gitflow-ai on GitLab'}
+                  {isCreating ? 'Creating Repository...' : 'Create shengliangsong/gitflow-ai on GitLab'}
                 </button>
               </div>
             ) : (
@@ -195,7 +195,7 @@ export const GitLabSyncView: React.FC = () => {
                   <Globe size={18} className="text-emerald-500" />
                   <div>
                     <p className="text-xs font-bold text-white">gitflow-ai</p>
-                    <p className="text-[10px] text-white/40 font-mono">{gitlabRepo?.path_with_namespace || 'shengliang/gitflow-ai'}</p>
+                    <p className="text-[10px] text-white/40 font-mono">{gitlabRepo?.path_with_namespace || 'shengliangsong/gitflow-ai'}</p>
                   </div>
                 </div>
                 <a 
@@ -233,7 +233,7 @@ export const GitLabSyncView: React.FC = () => {
                 <ArrowRight size={16} className="text-white/20" />
                 <div className="flex items-center gap-3">
                   <Globe size={20} className="text-orange-500" />
-                  <span className="text-sm font-mono text-white/60">gitflow-ai</span>
+                  <span className="text-sm font-mono text-white/60">shengliangsong/gitflow-ai</span>
                 </div>
               </div>
 
