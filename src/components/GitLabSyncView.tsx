@@ -51,9 +51,13 @@ export const GitLabSyncView: React.FC = () => {
   }, []);
 
   const createRepo = async () => {
+    if (repoCreated && gitlabRepo) {
+      setLogs(prev => [...prev, `ℹ️ GitLab repository "${gitlabRepo.path_with_namespace}" is already connected.`]);
+      return;
+    }
     setIsCreating(true);
     setError(null);
-    const gitlabPath = config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+    const gitlabPath = cleanPath(config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai', 'shengliangsong/gitflow-ai');
     const repoName = gitlabPath.split('/').pop() || 'gitflow-ai';
     
     setLogs(prev => [...prev, `🔍 Checking GitLab for "${gitlabPath}"...`]);
@@ -61,7 +65,11 @@ export const GitLabSyncView: React.FC = () => {
       const response = await fetch('/api/gitlab/repo/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: repoName, description: 'GitFlow AI Hackathon Submission' })
+        body: JSON.stringify({ 
+          name: repoName, 
+          description: 'GitFlow AI Hackathon Submission',
+          fullPath: gitlabPath
+        })
       });
       const data = await response.json();
       if (data.success) {
@@ -104,9 +112,16 @@ export const GitLabSyncView: React.FC = () => {
           gitlabProjectId: gitlabRepo?.id || gitlabPath 
         })
       });
-      const data = await response.json();
       
-      if (data.success) {
+      let data;
+      const responseText = await response.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`);
+      }
+      
+      if (response.ok && data.success) {
         // Simulate progress
         for (let i = 0; i <= 100; i += 10) {
           setSyncProgress(i);
@@ -115,10 +130,15 @@ export const GitLabSyncView: React.FC = () => {
         setCommits(data.commits);
         setLogs(prev => [...prev, `✅ Successfully synced ${data.commits.length} commits.`, '🔄 GitLab repository updated.']);
       } else {
-        setError(data.error || 'Failed to sync commits.');
+        const errorMsg = data.error || data.message || response.statusText || 'Failed to sync commits.';
+        setLogs(prev => [...prev, `❌ Error: ${errorMsg}`]);
+        setError(errorMsg);
       }
     } catch (err: any) {
-      setError('Network error while syncing commits.');
+      console.error('Sync error:', err);
+      const errorMsg = err.message || 'Network error while syncing commits.';
+      setLogs(prev => [...prev, `❌ Error: ${errorMsg}`]);
+      setError(errorMsg);
     } finally {
       setIsSyncing(false);
     }

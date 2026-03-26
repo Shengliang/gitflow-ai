@@ -358,11 +358,30 @@ async function startServer() {
       return res.status(400).json({ error: "GITLAB_TOKEN not configured." });
     }
 
-    const { name, description } = req.body;
+    const { name, description, fullPath } = req.body;
     const repoName = name || "gitflow-ai";
+    const gitlabPath = fullPath || process.env.GITLAB_REPRO || `shengliangsong/${repoName}`;
 
     try {
-      // 1. Check if repository already exists
+      // 1. Check if repository already exists using the full path (more efficient)
+      console.log(`🔍 Checking if GitLab repository "${gitlabPath}" exists...`);
+      const checkResponse = await fetch(`https://gitlab.com/api/v4/projects/${encodeURIComponent(gitlabPath)}`, {
+        headers: { "PRIVATE-TOKEN": token }
+      });
+      
+      if (checkResponse.ok) {
+        const project = await checkResponse.json();
+        console.log(`ℹ️ GitLab repository "${gitlabPath}" already exists. ID: ${project.id}`);
+        return res.json({
+          success: true,
+          alreadyExists: true,
+          message: `GitLab repository "${repoName}" already exists.`,
+          project: project
+        });
+      }
+
+      // 2. If not found by full path, try searching by name (fallback)
+      console.log(`🔍 Repository not found by path, searching for "${repoName}"...`);
       const searchResponse = await fetch(`https://gitlab.com/api/v4/projects?search=${encodeURIComponent(repoName)}&owned=true`, {
         headers: { "PRIVATE-TOKEN": token }
       });
@@ -372,6 +391,7 @@ async function startServer() {
         const exactMatch = existingProjects.find((p: any) => p.name === repoName || p.path === repoName);
         
         if (exactMatch) {
+          console.log(`ℹ️ GitLab repository "${repoName}" found via search. ID: ${exactMatch.id}`);
           return res.json({
             success: true,
             alreadyExists: true,
@@ -381,7 +401,8 @@ async function startServer() {
         }
       }
 
-      // 2. Create if not exists
+      // 3. Create if not exists
+      console.log(`🚀 Creating GitLab repository "${repoName}"...`);
       const response = await fetch("https://gitlab.com/api/v4/projects", {
         method: "POST",
         headers: { 
@@ -432,11 +453,25 @@ async function startServer() {
       // 1. Fetch commits from GitHub to show in the response
       const ghApiUrl = `https://api.github.com/repos/${finalGithubPath}/commits?per_page=10`;
       console.log(`🔍 Fetching GitHub commits from: ${ghApiUrl}`);
-      const ghResponse = await fetch(ghApiUrl);
+      
+      const ghHeaders: any = { 'Accept': 'application/vnd.github.v3+json' };
+      if (process.env.GITHUB_TOKEN) {
+        ghHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+      }
+      
+      const ghResponse = await fetch(ghApiUrl, { headers: ghHeaders });
       if (!ghResponse.ok) {
-        throw new Error(`GitHub API error: ${ghResponse.statusText} for ${finalGithubPath} (URL: ${ghApiUrl})`);
+        const errorBody = await ghResponse.text();
+        console.error(`GitHub API error: ${ghResponse.status} ${ghResponse.statusText}. Body: ${errorBody}`);
+        throw new Error(`GitHub API error: ${ghResponse.statusText} for ${finalGithubPath}. Please check if the repository exists and your GITHUB_TOKEN is valid.`);
       }
       const ghCommits = await ghResponse.json();
+
+      // Check if git is available
+      const gitCheck = spawnSync('git', ['--version']);
+      if (gitCheck.error) {
+        throw new Error("Git is not installed on the server.");
+      }
 
         // 2. Real Git Sync (Cherry-pick strategy)
         const tempDir = path.join(os.tmpdir(), `git-sync-${Date.now()}`);
