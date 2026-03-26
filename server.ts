@@ -136,6 +136,7 @@ async function startServer() {
       await syncQueueWithGitHub();
       res.json(mergeQueue);
     } catch (error) {
+      console.error("Error fetching merge queue:", error);
       res.status(500).json({ error: "Failed to fetch merge queue" });
     }
   });
@@ -145,6 +146,7 @@ async function startServer() {
       await syncBranchesWithGitHub();
       res.json(branches);
     } catch (error) {
+      console.error("Error fetching branches:", error);
       res.status(500).json({ error: "Failed to fetch branches" });
     }
   });
@@ -391,7 +393,7 @@ async function startServer() {
     // gitlabProjectId: the ID of the newly created repo or provided ID
     
     // Use GITLAB_REPRO as destination if provided and no project ID is given
-    const finalGitlabDest = gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai';
+    const finalGitlabDest = String(gitlabProjectId || process.env.GITLAB_REPRO || 'shengliangsong/gitflow-ai');
     
     // Extract path if it's a full URL
     const targetPath = finalGitlabDest.includes('gitlab.com/') 
@@ -1109,6 +1111,10 @@ run();
       GITHUB_REPO: process.env.GITHUB_REPO || "gitflow-queue",
       APP_URL: process.env.APP_URL || ""
     });
+  });
+
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
   });
 
   // Vite middleware for development
