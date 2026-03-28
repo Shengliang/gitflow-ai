@@ -596,126 +596,136 @@ async function startServer() {
       }
       const ghCommits = await ghResponse.json();
 
-      // Check if git is available
-      const gitCheck = spawnSync('git', ['--version']);
-      if (gitCheck.error) {
-        throw new Error("Git is not installed on the server.");
-      }
+      // 2. Real Git Sync (isomorphic-git strategy)
+      const tempDir = path.join(os.tmpdir(), `git-sync-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      const repoDir = path.join(tempDir, 'repo');
+      fs.mkdirSync(repoDir, { recursive: true });
 
-        // 2. Real Git Sync (Cherry-pick strategy)
-        const tempDir = path.join(os.tmpdir(), `git-sync-${Date.now()}`);
-        fs.mkdirSync(tempDir, { recursive: true });
+      try {
+        const { default: git } = await import("isomorphic-git");
+        // @ts-ignore
+        const { default: http } = await import("isomorphic-git/http/node/index.js");
 
+        const ghToken = process.env.GITHUB_TOKEN;
+        const ghUrl = `https://github.com/${finalGithubPath}.git`;
+        const glUrl = `https://gitlab.com/${finalGitlabPath}.git`;
+
+        // Clone GitLab (dest)
+        console.log(`Cloning GitLab repo from ${finalGitlabPath}...`);
         try {
-          const ghToken = process.env.GITHUB_TOKEN;
-          const ghUrl = ghToken 
-            ? `https://x-access-token:${ghToken}@github.com/${finalGithubPath}.git`
-            : `https://github.com/${finalGithubPath}.git`;
-          
-          const glUrl = `https://oauth2:${token}@gitlab.com/${finalGitlabPath}.git`;
+          await git.clone({
+            fs,
+            http,
+            dir: repoDir,
+            url: glUrl,
+            onAuth: () => ({ username: 'oauth2', password: token }),
+            singleBranch: false,
+            depth: 10
+          });
+        } catch (cloneErr) {
+          console.log("Clone failed, initializing new repo...");
+          await git.init({ fs, dir: repoDir });
+          await git.addRemote({ fs, dir: repoDir, remote: 'origin', url: glUrl });
+        }
 
-          // Clone GitLab (dest)
-          console.log(`Cloning GitLab repo from ${finalGitlabPath}...`);
-          const cloneGl = spawnSync('git', ['clone', glUrl, 'repo'], { cwd: tempDir });
-          
-          const repoDir = path.join(tempDir, 'repo');
-          if (!fs.existsSync(repoDir)) {
-            // If clone failed, maybe it's an empty repo. Try to init.
-            fs.mkdirSync(repoDir, { recursive: true });
-            spawnSync('git', ['init'], { cwd: repoDir });
-            spawnSync('git', ['remote', 'add', 'origin', glUrl], { cwd: repoDir });
+        // Add GitHub (source) as remote
+        await git.addRemote({ fs, dir: repoDir, remote: 'github', url: ghUrl });
+        
+        // Fetch GitHub
+        console.log("Fetching from GitHub...");
+        await git.fetch({
+          fs,
+          http,
+          dir: repoDir,
+          remote: 'github',
+          onAuth: () => ghToken ? { username: 'x-access-token', password: ghToken } : undefined,
+          depth: 10
+        });
+
+        // Determine source branch from GitHub (main or master)
+        let sourceBranch = 'main';
+        const ghRemoteInfo = await git.listBranches({ fs, dir: repoDir, remote: 'github' });
+        if (!ghRemoteInfo.includes('main')) {
+          sourceBranch = 'master';
+        }
+
+        // Destination branch on GitLab is now 'release'
+        const destBranch = 'release';
+
+        // 1. Try to checkout GitLab branch
+        console.log(`Checking out GitLab branch: ${destBranch}...`);
+        let branchExistsOnGitLab = true;
+        try {
+          await git.checkout({ fs, dir: repoDir, ref: destBranch });
+        } catch (checkoutErr) {
+          try {
+            // Try to track from origin
+            await git.fetch({
+              fs,
+              http,
+              dir: repoDir,
+              remote: 'origin',
+              onAuth: () => ({ username: 'oauth2', password: token }),
+              depth: 1
+            });
+            await git.branch({ fs, dir: repoDir, ref: destBranch, object: `origin/${destBranch}` });
+            await git.checkout({ fs, dir: repoDir, ref: destBranch });
+          } catch (trackErr) {
+            branchExistsOnGitLab = false;
+            console.log(`Branch ${destBranch} does not exist on GitLab yet.`);
           }
+        }
 
-          // Configure git user
-          spawnSync('git', ['config', 'user.email', 'gitflow-ai@example.com'], { cwd: repoDir });
-          spawnSync('git', ['config', 'user.name', 'GitFlow AI Orchestrator'], { cwd: repoDir });
-
-          // Add GitHub (source) as remote
-          spawnSync('git', ['remote', 'add', 'github', ghUrl], { cwd: repoDir });
+        if (!branchExistsOnGitLab) {
+          // Local branch doesn't exist on GitLab. Create it from github source branch.
+          console.log(`Creating new branch ${destBranch} from github/${sourceBranch}...`);
+          await git.branch({ fs, dir: repoDir, ref: destBranch, object: `github/${sourceBranch}` });
+          await git.checkout({ fs, dir: repoDir, ref: destBranch });
           
-          // Fetch GitHub
-          console.log("Fetching from GitHub...");
-          spawnSync('git', ['fetch', 'github'], { cwd: repoDir });
-
-          // Determine source branch from GitHub (main or master)
-          let sourceBranch = 'main';
-          const remoteMain = spawnSync('git', ['ls-remote', '--heads', 'github', 'main'], { cwd: repoDir });
-          if (!remoteMain.stdout.toString().includes('refs/heads/main')) {
-            sourceBranch = 'master';
-          }
-
-          // Destination branch on GitLab is now 'release'
-          const destBranch = 'release';
-
-          // 1. Try to checkout GitLab branch
-          console.log(`Checking out GitLab branch: ${destBranch}...`);
+          // Initial push
+          console.log("Initial push to GitLab...");
+          await git.push({
+            fs,
+            http,
+            dir: repoDir,
+            remote: 'origin',
+            ref: destBranch,
+            onAuth: () => ({ username: 'oauth2', password: token })
+          });
+        } else {
+          // Local branch exists. Merge changes from GitHub source branch.
+          console.log(`Merging changes from github/${sourceBranch} into ${destBranch}...`);
           
-          // Ensure we are in a clean state
-          spawnSync('git', ['reset', '--hard'], { cwd: repoDir });
-          spawnSync('git', ['clean', '-fd'], { cwd: repoDir });
+          try {
+            const mergeResult = await git.merge({
+              fs,
+              dir: repoDir,
+              ours: destBranch,
+              theirs: `github/${sourceBranch}`,
+              author: { name: 'GitFlow AI Orchestrator', email: 'gitflow-ai@example.com' },
+              fastForwardOnly: false
+            });
 
-          let branchExistsOnGitLab = true;
-          const checkout = spawnSync('git', ['checkout', destBranch], { cwd: repoDir });
-          if (checkout.status !== 0) {
-            // If it doesn't exist locally, try to track from origin
-            const track = spawnSync('git', ['checkout', '-b', destBranch, `origin/${destBranch}`], { cwd: repoDir });
-            if (track.status !== 0) {
-              branchExistsOnGitLab = false;
-              console.log(`Branch ${destBranch} does not exist on GitLab yet.`);
-            }
-          }
-
-          if (!branchExistsOnGitLab) {
-            // Local branch doesn't exist on GitLab. Create it from github source branch.
-            console.log(`Creating new branch ${destBranch} from github/${sourceBranch}...`);
-            spawnSync('git', ['checkout', '-b', destBranch, `github/${sourceBranch}`], { cwd: repoDir });
-            // Initial push
-            const initialPush = spawnSync('git', ['push', '-u', 'origin', destBranch], { cwd: repoDir });
-            if (initialPush.status !== 0) {
-              throw new Error(`Initial push failed: ${initialPush.stderr.toString()}`);
-            }
-          } else {
-            // Local branch exists. Find missing commits from GitHub source branch.
-            console.log(`Finding missing commits for ${destBranch} from github/${sourceBranch}...`);
-            // Update local github ref
-            spawnSync('git', ['fetch', 'github'], { cwd: repoDir });
-            
-            const log = spawnSync('git', ['log', `HEAD..github/${sourceBranch}`, '--reverse', '--format=%H'], { cwd: repoDir });
-            const commitHashes = log.stdout.toString().split('\n').filter(h => h.trim() !== '');
-
-            if (commitHashes.length > 0) {
-              console.log(`Cherry-picking ${commitHashes.length} commits...`);
-              for (const hash of commitHashes) {
-                console.log(`Applying commit ${hash}...`);
-                // If force is true, use '-X theirs' to resolve conflicts by favoring GitHub's version
-                // Also use --allow-empty to avoid failing if the commit introduces no changes
-                const cpArgs = force 
-                  ? ['cherry-pick', '-X', 'theirs', '--allow-empty', hash] 
-                  : ['cherry-pick', '--allow-empty', hash];
-                
-                const cp = spawnSync('git', cpArgs, { cwd: repoDir });
-                if (cp.status !== 0) {
-                  const errorOutput = cp.stderr.toString() || cp.stdout.toString();
-                  console.error(`Cherry-pick failed for ${hash}: ${errorOutput}`);
-                  spawnSync('git', ['cherry-pick', '--abort'], { cwd: repoDir });
-                  
-                  let customError = `Cherry-pick failed for commit ${hash}.`;
-                  if (!force) {
-                    customError += " Try enabling 'Force Sync Mode' to automatically resolve conflicts.";
-                  }
-                  throw new Error(`${customError}\nDetails: ${errorOutput}`);
-                }
-              }
-              // Push to GitLab (NO FORCE PUSH - respects protected branches)
+            if (mergeResult.oid) {
+              // Push to GitLab
               console.log(`Pushing to GitLab branch: ${destBranch}...`);
-              const push = spawnSync('git', ['push', 'origin', destBranch], { cwd: repoDir });
-              if (push.status !== 0) {
-                throw new Error(`Git push failed: ${push.stderr.toString()}`);
-              }
+              await git.push({
+                fs,
+                http,
+                dir: repoDir,
+                remote: 'origin',
+                ref: destBranch,
+                onAuth: () => ({ username: 'oauth2', password: token })
+              });
             } else {
               console.log("No new commits to sync.");
             }
+          } catch (mergeErr: any) {
+            console.error("Merge failed:", mergeErr.message);
+            throw new Error(`Sync failed: ${mergeErr.message}. This might be due to complex conflicts that require manual resolution.`);
           }
+        }
 
           const syncedCommits = ghCommits.map((c: any) => ({
             id: c.sha,

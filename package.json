@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@isomorphic-git/lightning-fs": "^4.6.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
@@ -20,6 +21,7 @@
     "express": "^4.21.2",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.14.0",
+    "isomorphic-git": "^1.37.4",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
