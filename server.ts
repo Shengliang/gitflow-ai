@@ -132,11 +132,6 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Bind the port immediately to prevent the preview from hanging
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`✅ Server is now listening on http://0.0.0.0:${PORT}`);
-  });
-
   console.log("🛠️ Initializing GitHub configuration...");
   const githubConfig = parseGitHubConfig();
   GITHUB_OWNER = githubConfig.owner;
@@ -1465,6 +1460,10 @@ run();
   }
 
   console.log("🚀 Server initialization complete.");
+
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✅ Server is now listening on http://0.0.0.0:${PORT}`);
+  });
 }
 
 startServer().catch(err => {
