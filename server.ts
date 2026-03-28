@@ -637,55 +637,78 @@ async function startServer() {
           console.log("Fetching from GitHub...");
           spawnSync('git', ['fetch', 'github'], { cwd: repoDir });
 
-          // Determine branch (main or master)
-          let branch = 'main';
+          // Determine source branch from GitHub (main or master)
+          let sourceBranch = 'main';
           const remoteMain = spawnSync('git', ['ls-remote', '--heads', 'github', 'main'], { cwd: repoDir });
           if (!remoteMain.stdout.toString().includes('refs/heads/main')) {
-            branch = 'master';
+            sourceBranch = 'master';
           }
 
+          // Destination branch on GitLab is now 'release'
+          const destBranch = 'release';
+
           // 1. Try to checkout GitLab branch
-          console.log(`Checking out GitLab branch: ${branch}...`);
+          console.log(`Checking out GitLab branch: ${destBranch}...`);
+          
+          // Ensure we are in a clean state
+          spawnSync('git', ['reset', '--hard'], { cwd: repoDir });
+          spawnSync('git', ['clean', '-fd'], { cwd: repoDir });
+
           let branchExistsOnGitLab = true;
-          const checkout = spawnSync('git', ['checkout', branch], { cwd: repoDir });
+          const checkout = spawnSync('git', ['checkout', destBranch], { cwd: repoDir });
           if (checkout.status !== 0) {
             // If it doesn't exist locally, try to track from origin
-            const track = spawnSync('git', ['checkout', '-b', branch, `origin/${branch}`], { cwd: repoDir });
+            const track = spawnSync('git', ['checkout', '-b', destBranch, `origin/${destBranch}`], { cwd: repoDir });
             if (track.status !== 0) {
               branchExistsOnGitLab = false;
-              console.log(`Branch ${branch} does not exist on GitLab yet.`);
+              console.log(`Branch ${destBranch} does not exist on GitLab yet.`);
             }
           }
 
           if (!branchExistsOnGitLab) {
-            // Local branch doesn't exist on GitLab. Create it from github.
-            console.log(`Creating new branch ${branch} from github/${branch}...`);
-            spawnSync('git', ['checkout', '-b', branch, `github/${branch}`], { cwd: repoDir });
+            // Local branch doesn't exist on GitLab. Create it from github source branch.
+            console.log(`Creating new branch ${destBranch} from github/${sourceBranch}...`);
+            spawnSync('git', ['checkout', '-b', destBranch, `github/${sourceBranch}`], { cwd: repoDir });
             // Initial push
-            const initialPush = spawnSync('git', ['push', '-u', 'origin', branch], { cwd: repoDir });
+            const initialPush = spawnSync('git', ['push', '-u', 'origin', destBranch], { cwd: repoDir });
             if (initialPush.status !== 0) {
               throw new Error(`Initial push failed: ${initialPush.stderr.toString()}`);
             }
           } else {
-            // Local branch exists. Find missing commits from GitHub.
-            console.log(`Finding missing commits for ${branch} from github/${branch}...`);
-            const log = spawnSync('git', ['log', `HEAD..github/${branch}`, '--reverse', '--format=%H'], { cwd: repoDir });
+            // Local branch exists. Find missing commits from GitHub source branch.
+            console.log(`Finding missing commits for ${destBranch} from github/${sourceBranch}...`);
+            // Update local github ref
+            spawnSync('git', ['fetch', 'github'], { cwd: repoDir });
+            
+            const log = spawnSync('git', ['log', `HEAD..github/${sourceBranch}`, '--reverse', '--format=%H'], { cwd: repoDir });
             const commitHashes = log.stdout.toString().split('\n').filter(h => h.trim() !== '');
 
             if (commitHashes.length > 0) {
               console.log(`Cherry-picking ${commitHashes.length} commits...`);
               for (const hash of commitHashes) {
+                console.log(`Applying commit ${hash}...`);
                 // If force is true, use '-X theirs' to resolve conflicts by favoring GitHub's version
-                const cpArgs = force ? ['cherry-pick', '-X', 'theirs', hash] : ['cherry-pick', hash];
+                // Also use --allow-empty to avoid failing if the commit introduces no changes
+                const cpArgs = force 
+                  ? ['cherry-pick', '-X', 'theirs', '--allow-empty', hash] 
+                  : ['cherry-pick', '--allow-empty', hash];
+                
                 const cp = spawnSync('git', cpArgs, { cwd: repoDir });
                 if (cp.status !== 0) {
+                  const errorOutput = cp.stderr.toString() || cp.stdout.toString();
+                  console.error(`Cherry-pick failed for ${hash}: ${errorOutput}`);
                   spawnSync('git', ['cherry-pick', '--abort'], { cwd: repoDir });
-                  throw new Error(`Cherry-pick failed for commit ${hash}: ${cp.stderr.toString()}`);
+                  
+                  let customError = `Cherry-pick failed for commit ${hash}.`;
+                  if (!force) {
+                    customError += " Try enabling 'Force Sync Mode' to automatically resolve conflicts.";
+                  }
+                  throw new Error(`${customError}\nDetails: ${errorOutput}`);
                 }
               }
               // Push to GitLab (NO FORCE PUSH - respects protected branches)
-              console.log("Pushing to GitLab...");
-              const push = spawnSync('git', ['push', 'origin', branch], { cwd: repoDir });
+              console.log(`Pushing to GitLab branch: ${destBranch}...`);
+              const push = spawnSync('git', ['push', 'origin', destBranch], { cwd: repoDir });
               if (push.status !== 0) {
                 throw new Error(`Git push failed: ${push.stderr.toString()}`);
               }

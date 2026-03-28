@@ -228,6 +228,7 @@ export const GitLabSyncView: React.FC = () => {
                   </div>
                   <span className="text-sm font-mono text-white font-bold truncate">
                     {cleanPath(config?.GITLAB_REPRO || 'shengliangsong/gitflow-ai', 'shengliangsong/gitflow-ai')}
+                    <span className="ml-2 text-[10px] text-orange-500/60 uppercase tracking-tighter">(release branch)</span>
                   </span>
                 </div>
               </div>
